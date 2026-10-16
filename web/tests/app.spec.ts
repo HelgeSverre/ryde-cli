@@ -52,11 +52,14 @@ test('bundled dashboard loads through the real CLI server and privacy headers', 
   try {
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
+    page.on('console', (message) => { if (message.type() === 'error' && message.text().includes('Worker failed')) errors.push(message.text()); });
     await page.route('https://**/*', async (route) => {
       if (route.request().url().includes('openfreemap.org/styles/')) await route.fulfill({json: {version: 8, sources: {}, layers: []}});
       else await route.abort();
     });
+    const workerReady = page.waitForResponse((response) => response.url().includes('maplibre-gl-worker') && response.status() === 200);
     const response = await page.goto(result.url);
+    await workerReady;
     expect(response?.headers()['referrer-policy']).toBe('no-referrer');
     await expect(page.locator('.metrics div').first().locator('b')).toHaveText('3');
     await expect(page.locator('canvas').first()).toBeVisible();

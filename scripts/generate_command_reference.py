@@ -28,7 +28,7 @@ def main() -> None:
         "Generated from the CLI parser. Regenerate with "
         "`uv run scripts/generate_command_reference.py`.\n\n"
         "Run these commands as `uv run ryde …` in a checkout, or "
-        "`uvx --from git+https://github.com/HelgeSverre/ryde-cli ryde …` anywhere.\n"
+        "`uvx --from ryde-cli ryde …` anywhere.\n"
         "Usage blocks below show argparse's executable name. Common options "
         "`--format`, `--output`, `--config`, `--base-url`, and `--mobile-type` "
         "also work after subcommands when passed as separate arguments.\n\n"

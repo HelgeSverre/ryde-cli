@@ -14,11 +14,21 @@ import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from socketserver import TCPServer
 from typing import Any
 
 from .client import RydeError
 
 ASSETS = Path(__file__).with_name("web")
+
+
+class LoopbackServer(ThreadingHTTPServer):
+    def server_bind(self) -> None:
+        # HTTPServer normally reverse-resolves its bound address. A fixed
+        # loopback-only service needs no DNS, which can stall on managed Macs.
+        TCPServer.server_bind(self)
+        self.server_name = "127.0.0.1"
+        self.server_port = self.server_address[1]
 
 
 def make_server(directory: Path, *, port: int = 0) -> tuple[ThreadingHTTPServer, str]:
@@ -33,6 +43,18 @@ def make_server(directory: Path, *, port: int = 0) -> tuple[ThreadingHTTPServer,
         for item in files
     ):
         raise RydeError("invalid stats manifest filenames")
+    # Build the complete resource table before accepting HTTP requests. Request
+    # text is only compared with keys; it never becomes a filesystem path or MIME.
+    resources: dict[str, tuple[Path, str]] = {
+        f"data/{name}": (directory / name, "application/json") for name in files
+    }
+    for asset in ASSETS.rglob("*"):
+        if asset.is_file() and not asset.is_symlink():
+            resources[asset.relative_to(ASSETS).as_posix()] = (
+                asset,
+                mimetypes.guess_type(asset.name)[0] or "application/octet-stream",
+            )
+    resources[""] = (ASSETS / "index.html", "text/html")
     prefix = f"/{secrets.token_urlsafe(24)}/"
 
     class Handler(BaseHTTPRequestHandler):
@@ -69,20 +91,13 @@ def make_server(directory: Path, *, port: int = 0) -> tuple[ThreadingHTTPServer,
             if route == "data/manifest.json":
                 body = json.dumps(manifest).encode()
                 mime = "application/json"
-            elif route and route.startswith("data/") and route[5:] in files:
+            elif route is not None and route in resources:
+                path, mime = resources[route]
                 try:
-                    body = (directory / route[5:]).read_bytes()
+                    body = path.read_bytes()
                 except OSError:
                     self.send_error(404)
                     return
-                mime = "application/json"
-            elif route is not None:
-                path = (ASSETS / (route or "index.html")).resolve()
-                if not path.is_relative_to(ASSETS.resolve()) or not path.is_file():
-                    self.send_error(404)
-                    return
-                body = path.read_bytes()
-                mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
             else:
                 self.send_error(404)
                 return
@@ -100,7 +115,7 @@ def make_server(directory: Path, *, port: int = 0) -> tuple[ThreadingHTTPServer,
             self.end_headers()
             threading.Thread(target=self.server.shutdown, daemon=True).start()
 
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    server = LoopbackServer(("127.0.0.1", port), Handler)
     server.daemon_threads = True
     return server, f"http://127.0.0.1:{server.server_port}{prefix}"
 

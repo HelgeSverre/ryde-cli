@@ -26,7 +26,7 @@ uv run ryde stats --stop '<dashboard-url>'
 ```
 
 Outside a checkout, replace `uv run` with
-`uvx --from git+https://github.com/HelgeSverre/ryde-cli`.
+`uvx --from ryde-cli`.
 
 ## What is fetched
 
@@ -54,8 +54,7 @@ A custom `--data-dir` is bound to its first login and refuses another token.
 Dataset directories use `0700`; JSON files use `0600`. Auth credentials are
 removed from exported records and never supplied to the frontend. The fetch
 process can access the login; the dashboard process does not inherit Ryde
-environment variables. No real account data is included in the repository,
-wheel, source distribution, or CI artifact.
+environment variables.
 
 The dashboard binds only to `127.0.0.1`. Each session has a random path, serves
 only the bundled UI and manifest-listed JSON, rejects unrelated host headers,
@@ -105,8 +104,4 @@ web/                      React/TypeScript UI source and synthetic browser tests
 scripts/                  Generated docs, package smoke check, public-tree check
 ```
 
-The UI source is copied selectively from the private prototype. The original
-prototype remains separate and unchanged. Its old export script, datasets,
-checkpoints, build output, and auth state were not copied. Vite has
-`publicDir: false` and source maps disabled, so private `public/data` files
-cannot be copied into a build accidentally.
+Frontend development and rebuild instructions are in [web/README.md](../web/README.md).

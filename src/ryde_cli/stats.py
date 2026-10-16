@@ -172,10 +172,10 @@ def open_dashboard(
     )
     assert child.stdout is not None
     try:
-        readable, _, _ = select.select([child.stdout], [], [], 10)
+        readable, _, _ = select.select([child.stdout], [], [], 30)
         if not readable:
             child.terminate()
-            raise RydeError("dashboard server did not start within 10 seconds")
+            raise RydeError("dashboard server did not start within 30 seconds")
         line = child.stdout.readline()
         if not line:
             raise RydeError("dashboard server could not start; check the data directory and port")

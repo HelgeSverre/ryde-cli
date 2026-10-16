@@ -1,57 +1,67 @@
-# Distribution plan
+# Distribution and releases
 
-## Available now: GitHub and uv
+## Install from PyPI
 
-The source repository is the initial distribution channel. No PyPI package has
-been released by this project yet. Run the CLI directly from GitHub:
-
-```sh
-uvx --from git+https://github.com/HelgeSverre/ryde-cli ryde --help
-```
-
-Install both entry points into a persistent tool environment if desired:
+Run the CLI or MCP server without cloning:
 
 ```sh
-uv tool install git+https://github.com/HelgeSverre/ryde-cli
-uv tool run --from git+https://github.com/HelgeSverre/ryde-cli ryde --help
+uvx --from ryde-cli ryde --help
+uvx --from ryde-cli ryde-mcp
 ```
 
-For reproducibility, append `@<commit-sha>` to the Git URL. Once release tags
-exist, a tag can be used in the same position. Git-based installation requires
-Git. See [uv's tool guide](https://docs.astral.sh/uv/guides/tools/).
+For a persistent installation:
 
-CI builds a wheel and source archive and uploads them as a GitHub Actions
-artifact. This checks packaging without publishing to an index.
+```sh
+uv tool install ryde-cli
+```
 
-## Proposed next step: PyPI
+Pin a version with `--from ryde-cli==0.1.0`. Upgrade a persistent installation
+with `uv tool upgrade ryde-cli`.
 
-PyPI is a good fit for this pure-Python package: it distributes both the CLI
-and MCP entry points, works with uv, and avoids requiring Git for installation.
-There is no need for a separate npm package or container to use the CLI.
+## Install from GitHub
 
-The desired project name is `ryde-cli`. A lookup returned no project on
-2026-10-16; availability is not reserved and must be checked again at release.
+To run a particular source revision:
 
-Before the first upload:
+```sh
+uvx --from git+https://github.com/HelgeSverre/ryde-cli@v0.1.0 ryde --help
+```
 
-1. Confirm the package name and sign in to the intended PyPI and TestPyPI
-   accounts with two-factor authentication.
-2. Add a pending Trusted Publisher for `HelgeSverre/ryde-cli`, choosing a
-   publishing workflow filename (for example `publish.yml`) and a GitHub
-   environment (for example `pypi`). Pending publishers allow the first upload
-   to create the project. TestPyPI has separate account/publisher settings.
-3. Add that workflow and environment. Build and verify distributions in a job
-   with read-only permissions. Give only the publishing job `id-token: write`,
-   bind it to the selected environment, and use `uv publish --trusted-publishing
-   always`. Do not store a long-lived PyPI API token.
-4. Test publishing to TestPyPI first. TestPyPI does not mirror all dependencies;
-   install the tested wheel with dependencies from PyPI rather than treating
-   TestPyPI as the main dependency index.
-5. Check the tag against the package version, run CI, and review archive contents.
-   Create the release only after the publisher setup is verified. Uploaded
-   versions cannot be overwritten; fixes require a new version.
+Replace `v0.1.0` with a commit or tag. Git-based installation requires Git.
 
-Local release validation uses:
+## PyPI configuration
+
+The publishing workflow is `.github/workflows/publish.yml`. Its
+[PyPI Trusted Publisher](https://pypi.org/manage/project/ryde-cli/settings/publishing/)
+uses these values:
+
+| Field | Value |
+| --- | --- |
+| PyPI project name | `ryde-cli` |
+| Owner | `HelgeSverre` |
+| Repository name | `ryde-cli` |
+| Workflow name | `publish.yml` |
+| Environment name | Leave blank |
+
+The workflow uses GitHub OIDC with `uv publish --trusted-publishing always`.
+Only the publishing job receives `id-token: write`. It downloads the validated
+wheel and source archive from a separate build job and generates PEP 740
+attestations. No GitHub environment or PyPI API token is required.
+
+## Validate a release
+
+Run the workflow manually to build and check the distributions **without uploading**:
+
+```sh
+gh workflow run publish.yml --ref main
+gh run list --workflow publish.yml
+```
+
+It runs the Python tests, linting, generated documentation check, archive checks,
+strict README validation, and installed-package smoke tests for both the wheel
+and source archive. The compiled dashboard is included in both archives.
+The CI workflow separately verifies frontend builds and browser behavior.
+
+Local validation:
 
 ```sh
 uv sync --locked
@@ -60,24 +70,24 @@ uv run ruff check .
 uv run ruff format --check .
 uv run scripts/generate_command_reference.py --check
 uv build
-uvx --from ./dist/ryde_cli-0.1.0-py3-none-any.whl ryde --version
+uv run scripts/check_public_tree.py
 uvx --from twine twine check --strict dist/*
 ```
 
-After this project's first PyPI release, the shorter distribution commands
-would become available:
+## Publish a version
 
-```sh
-# Future commands: use only after this project's PyPI release exists.
-uvx --from ryde-cli ryde --help
-uvx --from ryde-cli ryde-mcp
-uv tool install ryde-cli
-```
+1. Update the version in `pyproject.toml`, run `uv lock`, update `CHANGELOG.md`,
+   and push the changes to `main`.
+2. Wait for CI and the manual publishing validation to pass for that commit.
+3. Create a GitHub release with tag `v<version>`, targeting that commit. Review
+   the release notes before publishing the release.
+4. Publishing the GitHub release starts the upload workflow. The tag must match
+   the package version, and its commit must belong to `main`.
+5. Check the workflow and the new [PyPI project page](https://pypi.org/project/ryde-cli/).
+   Test installation with `uvx --refresh --from ryde-cli ryde --version`.
 
-No publishing workflow is enabled yet. The repository CI cannot upload to PyPI.
-The remaining decision is whether to keep GitHub-only distribution initially
-or configure PyPI Trusted Publishing for the first tagged release.
+Draft releases and manual workflow runs do not upload. Uploaded versions cannot
+be overwritten; publish a new version for fixes.
 
-References: [uv build and publish](https://docs.astral.sh/uv/guides/package/),
-[PyPI pending publishers](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/),
-[uv GitHub Actions publishing](https://docs.astral.sh/uv/guides/integration/github/).
+References: [uv publishing](https://docs.astral.sh/uv/guides/integration/github/#publishing-to-pypi),
+[PyPI pending publishers](https://docs.pypi.org/trusted-publishers/creating-a-project-through-oidc/).

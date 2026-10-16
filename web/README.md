@@ -24,3 +24,13 @@ For the complete application, from the repository root run:
 ```sh
 uv run ryde stats
 ```
+
+To refresh the README screenshot with generated demo rides:
+
+```sh
+node scripts/capture-preview.mjs
+```
+
+The capture script generates its dataset in a temporary directory, starts the
+CLI server, captures the dashboard, and removes the temporary data. No login is
+needed. The basemap requires network access.

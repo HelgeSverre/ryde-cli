@@ -1,31 +1,38 @@
 # Distribution and releases
 
-## Install from GitHub
+## Install from PyPI
 
-Until the first PyPI release, run directly from GitHub:
-
-```sh
-uvx --from git+https://github.com/HelgeSverre/ryde-cli ryde --help
-uvx --from git+https://github.com/HelgeSverre/ryde-cli ryde-mcp
-uv tool install git+https://github.com/HelgeSverre/ryde-cli
-```
-
-Append `@<commit-sha>` or `@<tag>` to the Git URL to pin a version.
-Git-based installation requires Git.
-
-After the first PyPI release, use:
+Run the CLI or MCP server without cloning:
 
 ```sh
 uvx --from ryde-cli ryde --help
 uvx --from ryde-cli ryde-mcp
+```
+
+For a persistent installation:
+
+```sh
 uv tool install ryde-cli
 ```
 
+Pin a version with `--from ryde-cli==0.1.0`. Upgrade a persistent installation
+with `uv tool upgrade ryde-cli`.
+
+## Install from GitHub
+
+To run a particular source revision:
+
+```sh
+uvx --from git+https://github.com/HelgeSverre/ryde-cli@v0.1.0 ryde --help
+```
+
+Replace `v0.1.0` with a commit or tag. Git-based installation requires Git.
+
 ## PyPI configuration
 
-The publishing workflow is `.github/workflows/publish.yml`. Register a pending
-publisher under [PyPI account → Publishing](https://pypi.org/manage/account/publishing/)
-with these values:
+The publishing workflow is `.github/workflows/publish.yml`. Its
+[PyPI Trusted Publisher](https://pypi.org/manage/project/ryde-cli/settings/publishing/)
+uses these values:
 
 | Field | Value |
 | --- | --- |
@@ -34,9 +41,6 @@ with these values:
 | Repository name | `ryde-cli` |
 | Workflow name | `publish.yml` |
 | Environment name | Leave blank |
-
-The first successful upload creates the project under the account that registered
-this publisher. A pending publisher does not reserve the project name.
 
 The workflow uses GitHub OIDC with `uv publish --trusted-publishing always`.
 Only the publishing job receives `id-token: write`. It downloads the validated

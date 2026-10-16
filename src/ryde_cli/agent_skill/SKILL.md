@@ -6,8 +6,8 @@ license: MIT
 
 Use the Ryde MCP tools when connected. Otherwise use the CLI through uv.
 In this repository use `uv run ryde`; elsewhere use
-`uvx --from git+https://github.com/HelgeSverre/ryde-cli ryde`.
-Run `--help` for exact options. The package is not on PyPI yet.
+`uvx --from ryde-cli ryde`.
+Run `--help` for exact options.
 
 Authentication belongs to the user. If no session exists, explain that they
 need to run the login command interactively. Do not ask them to paste tokens,

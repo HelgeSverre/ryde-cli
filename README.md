@@ -2,6 +2,7 @@
 
 # Ryde CLI
 
+[![PyPI](https://img.shields.io/pypi/v/ryde-cli.svg)](https://pypi.org/project/ryde-cli/)
 [![CI](https://github.com/HelgeSverre/ryde-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/HelgeSverre/ryde-cli/actions/workflows/ci.yml)
 [![Dependency audit](https://github.com/HelgeSverre/ryde-cli/actions/workflows/audit.yml/badge.svg)](https://github.com/HelgeSverre/ryde-cli/actions/workflows/audit.yml)
 [![CodeQL](https://github.com/HelgeSverre/ryde-cli/actions/workflows/codeql.yml/badge.svg)](https://github.com/HelgeSverre/ryde-cli/actions/workflows/codeql.yml)
@@ -24,12 +25,12 @@ Requires [uv](https://docs.astral.sh/uv/getting-started/installation/) on macOS 
 Linux. Python 3.11+ is required; uv can install a compatible interpreter.
 Windows is not currently supported because local secrets use Unix file permissions.
 
-Run directly from GitHub, without cloning:
+Run directly from PyPI, without cloning:
 
 ```sh
-uvx --from git+https://github.com/HelgeSverre/ryde-cli ryde --help
-uvx --from git+https://github.com/HelgeSverre/ryde-cli ryde login
-uvx --from git+https://github.com/HelgeSverre/ryde-cli ryde stats
+uvx --from ryde-cli ryde --help
+uvx --from ryde-cli ryde login
+uvx --from ryde-cli ryde stats
 ```
 
 Or clone it for local use and development:
@@ -44,9 +45,8 @@ uv run ryde stats
 ```
 
 The examples below use `uv run` from a checkout. To run them anywhere, replace
-`uv run` with `uvx --from git+https://github.com/HelgeSverre/ryde-cli`.
+`uv run` with `uvx --from ryde-cli`.
 For a persistent installation, see [distribution](https://github.com/HelgeSverre/ryde-cli/blob/main/docs/distribution.md).
-**This project has not been published to PyPI yet.**
 
 ## Login
 
@@ -212,7 +212,7 @@ The package also includes a stdio MCP server. Log in first using the same
 config path as your MCP client. Launch it through uv:
 
 ```sh
-uvx --from git+https://github.com/HelgeSverre/ryde-cli ryde-mcp
+uvx --from ryde-cli ryde-mcp
 # Or, from a local checkout:
 uv run ryde-mcp
 ```
@@ -224,7 +224,7 @@ For clients that accept an `mcpServers` JSON configuration:
   "mcpServers": {
     "ryde": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/HelgeSverre/ryde-cli", "ryde-mcp"],
+      "args": ["--from", "ryde-cli", "ryde-mcp"],
       "env": {"RYDE_CONFIG": "/absolute/path/to/your/ryde-config.json"}
     }
   }
@@ -232,7 +232,7 @@ For clients that accept an `mcpServers` JSON configuration:
 ```
 
 Use an absolute path to `uvx` if a desktop app cannot find it on `PATH`. For
-reproducible deployments, pin the Git URL to a reviewed commit (`@<commit-sha>`).
+reproducible deployments, pin the package version (`ryde-cli==0.1.0`).
 The server uses stdout for MCP messages and stderr for diagnostics.
 
 | Tools | Purpose |
@@ -323,5 +323,5 @@ See [CONTRIBUTING.md](https://github.com/HelgeSverre/ryde-cli/blob/main/CONTRIBU
 CI tests Python 3.11–3.14 on Linux and Python 3.14 on macOS, checks generated docs,
 builds and smoke-tests distributions, and runs dependency audits and CodeQL.
 
-GitHub distribution works with `uvx` today. See [distribution and releases](https://github.com/HelgeSverre/ryde-cli/blob/main/docs/distribution.md)
+See [distribution and releases](https://github.com/HelgeSverre/ryde-cli/blob/main/docs/distribution.md)
 for installation options and the PyPI release workflow. Licensed under [MIT](https://github.com/HelgeSverre/ryde-cli/blob/main/LICENSE).

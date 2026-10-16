@@ -1,8 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.1.0 — 2026-10-16
 
-Initial public source release, package version `0.1.0`. No PyPI release yet.
+Initial public release on PyPI.
 
 - Guided SMS authentication with a local duplicate-request guard.
 - Account, ride, route, pass, payment, and city-fare queries.

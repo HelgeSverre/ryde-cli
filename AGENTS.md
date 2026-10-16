@@ -3,7 +3,7 @@
 Unofficial account-data CLI, local map dashboard, and stdio MCP server.
 
 - Use uv for Python installation, execution, tests, and packaging. Document
-  `uv run` in a checkout and `uvx --from` outside it. No PyPI release exists yet.
+  `uv run` in a checkout and `uvx --from` outside it.
 - Keep auth/configs, real account records, GPS traces, checkpoints, and dashboard
   session URLs out of Git, test fixtures, build output, and documentation.
 - The original sibling stats workspace is private. Copy code selectively;

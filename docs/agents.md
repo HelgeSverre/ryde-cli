@@ -9,7 +9,7 @@ fetch → poll → show-dashboard workflow. Neither requires a hosted service.
 Do this interactively on the machine that will run the tools:
 
 ```sh
-uvx --from git+https://github.com/HelgeSverre/ryde-cli ryde login
+uvx --from ryde-cli ryde login
 ```
 
 The user's token stays in their local `0600` config. Do not paste tokens, SMS
@@ -19,14 +19,14 @@ codes, or config contents into agent chat or project config. A custom
 ## Codex MCP setup
 
 ```sh
-codex mcp add ryde -- uvx --from git+https://github.com/HelgeSverre/ryde-cli ryde-mcp
+codex mcp add ryde -- uvx --from ryde-cli ryde-mcp
 codex mcp list
 ```
 
 For a non-default config:
 
 ```sh
-codex mcp add ryde --env RYDE_CONFIG=/absolute/path/to/ryde-config.json -- uvx --from git+https://github.com/HelgeSverre/ryde-cli ryde-mcp
+codex mcp add ryde --env RYDE_CONFIG=/absolute/path/to/ryde-config.json -- uvx --from ryde-cli ryde-mcp
 ```
 
 This registers a user-level stdio server. Remove it with `codex mcp remove ryde`.
@@ -36,7 +36,7 @@ Codex also supports MCP configuration in its TOML config; see
 ## Claude Code MCP setup
 
 ```sh
-claude mcp add --scope user ryde -- uvx --from git+https://github.com/HelgeSverre/ryde-cli ryde-mcp
+claude mcp add --scope user ryde -- uvx --from ryde-cli ryde-mcp
 claude mcp get ryde
 ```
 
@@ -48,7 +48,7 @@ client before enabling access to personal data.
 [Claude MCP documentation](https://code.claude.com/docs/en/mcp).
 
 Desktop applications may require the absolute path to `uvx` if their PATH does
-not match the shell's. Pin the Git URL to `@<commit-sha>` for repeatable setups.
+not match the shell's. Pin the package version, for example `ryde-cli==0.1.0`, for repeatable setups.
 The MCP server shares the CLI's default config automatically; no token belongs
 in a reusable MCP definition.
 
@@ -60,12 +60,12 @@ For another project, explicitly install a copy from the package:
 
 ```sh
 # Default scope: the current project.
-uvx --from git+https://github.com/HelgeSverre/ryde-cli ryde skill --agent codex
-uvx --from git+https://github.com/HelgeSverre/ryde-cli ryde skill --agent claude
+uvx --from ryde-cli ryde skill --agent codex
+uvx --from ryde-cli ryde skill --agent claude
 
 # Optional: install for your user rather than the current project.
-uvx --from git+https://github.com/HelgeSverre/ryde-cli ryde skill --agent codex --scope user
-uvx --from git+https://github.com/HelgeSverre/ryde-cli ryde skill --agent claude --scope user
+uvx --from ryde-cli ryde skill --agent codex --scope user
+uvx --from ryde-cli ryde skill --agent claude --scope user
 ```
 
 The installer writes `.agents/skills/ryde-stats` for Codex or
@@ -114,7 +114,4 @@ tunnel, public dashboard, or remote MCP endpoint is created.
 | Claude/Codex plugins | Deferred | MCP plus a skill already covers the local workflow |
 | Remote hosting | Deferred | Would require separate authentication, access, and retention design |
 
-Primary documentation supports the client configuration and skill formats
-above. The packaging, background job, and local-server choices are this
-project's design decisions. PyPI publishing remains a separate step; see
-[distribution](distribution.md).
+See [distribution and releases](distribution.md) for installation and publishing.

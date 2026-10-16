@@ -26,7 +26,7 @@ uv run ryde stats --stop '<dashboard-url>'
 ```
 
 Outside a checkout, replace `uv run` with
-`uvx --from git+https://github.com/HelgeSverre/ryde-cli`.
+`uvx --from ryde-cli`.
 
 ## What is fetched
 

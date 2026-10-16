@@ -1,3 +1,5 @@
+![Ryde CLI — Your rides. Your data.](docs/assets/header.png)
+
 # Ryde CLI
 
 [![CI](https://github.com/HelgeSverre/ryde-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/HelgeSverre/ryde-cli/actions/workflows/ci.yml)
@@ -11,10 +13,7 @@ An unofficial CLI, local map dashboard, and MCP server for your Ryde account.
 Export ride history, map recorded routes, inspect passes and payments, and
 compare RidePass costs.
 
-Account-data commands are read only. Authentication can send an SMS and create a
-login session. There are no commands to unlock scooters, start or end rides,
-buy passes, change payment methods, or edit your account. This project is not
-affiliated with Ryde; its private API may change without notice.
+Login uses SMS. Account commands are read only.
 
 [Quick start](#quick-start) · [Dashboard](#map-your-rides) · [Commands](#all-commands) ·
 [MCP](#mcp-server) · [Claude / Codex](docs/agents.md) · [Development](CONTRIBUTING.md)
@@ -101,15 +100,20 @@ missing traces fall back to start/end arcs; completed route requests are cached
 so an interrupted export can resume.
 
 Data is saved outside the repo in a private, login-scoped directory under
-`~/.local/share/ryde-cli/stats/` (or `XDG_DATA_HOME`). No personal data or auth
-state ships in the package. Standard ride records can include precise endpoint
-coordinates even without the additional trace flag.
+`~/.local/share/ryde-cli/stats/` (or `XDG_DATA_HOME`). Standard ride records include
+endpoint coordinates; `--include-location` also fetches the full recorded route.
 
 The server uses a random `127.0.0.1` URL and serves only its dataset and bundled
 UI. Treat the URL as private. OpenFreeMap supplies public map tiles; no Ryde
 token or ride records are sent to it, but tile requests reveal the viewed area.
 Remote agents cannot expose their loopback URL on a user's laptop automatically.
 See [dashboard storage and automation](docs/dashboard.md).
+
+## Dashboard preview
+
+![Ryde Stats showing a ride map, filters, and charts with 180 generated demo rides](docs/assets/dashboard.png)
+
+*180 generated demo rides, including 135 route traces.*
 
 ## All commands
 
@@ -200,7 +204,7 @@ Later rides in an exhausted pass window pay full PAYG.
 
 The model assumes every ride is pass eligible. It does not reconstruct historic
 prices or unknown parking/geographic exclusions, and cannot guarantee future
-savings. Each result includes the assumptions used. No purchase is made.
+savings. Each result includes the assumptions used.
 
 ## MCP server
 
@@ -257,7 +261,7 @@ uv run ryde skill --agent codex --scope user
 uv run ryde skill --agent claude --scope user
 ```
 
-Skill installation is optional and does not configure MCP or touch auth state.
+Skill setup and MCP registration are separate steps.
 
 ## Configuration
 

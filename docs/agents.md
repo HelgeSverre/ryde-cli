@@ -70,8 +70,7 @@ uvx --from git+https://github.com/HelgeSverre/ryde-cli ryde skill --agent claude
 
 The installer writes `.agents/skills/ryde-stats` for Codex or
 `.claude/skills/ryde-stats` for Claude, under the current directory or home
-according to scope. It does not alter MCP connections, credentials, or unrelated
-agent settings. Existing skills are preserved unless `--force` is supplied;
+according to scope. Existing skills are preserved unless `--force` is supplied;
 symlinked skills must be updated at their source. Remove the installed skill
 directory to uninstall it.
 

@@ -1,7 +1,9 @@
 import {ArcLayer, PathLayer, ScatterplotLayer} from '@deck.gl/layers';
 import {DeckGL} from '@deck.gl/react';
-import type {PickingInfo} from '@deck.gl/core';
+import {WebMercatorViewport, type PickingInfo} from '@deck.gl/core';
 import MapGL from 'react-map-gl/maplibre';
+import {setWorkerUrl} from 'maplibre-gl';
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import {useEffect, useMemo, useState} from 'react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import './legend.css';
@@ -10,6 +12,8 @@ import {bucketValue, filterRides} from './filter';
 import {PlotChart} from './PlotChart';
 import {RydeLogo} from './RydeLogo';
 import type {Filters, Manifest, RideView} from './types';
+
+setWorkerUrl(workerUrl);
 
 const palette = ['#68de3f', '#78ccff', '#ffcb69', '#f39ac2', '#9f8cff', '#ff907d', '#abef94', '#45d7c4'];
 const initialFilters: Filters = {from: '', to: '', dayType: 'all', routeDetail: 'all', minMinutes: 0, maxMinutes: 180, minCost: 0, maxCost: 500, query: '', bucket: 'month'};
@@ -45,8 +49,13 @@ export default function App() {
   }, [filters]);
   const filtered = useMemo(() => filterRides(rides, filters), [rides, filters]);
   const initialView = useMemo(() => {
-    const first = rides.find((ride) => ride.startPosition)?.startPosition;
-    return {longitude: first?.[0] ?? 0, latitude: first?.[1] ?? 0, zoom: first ? 12 : 1, pitch: 25, bearing: 0};
+    const points = rides.flatMap((ride) => [ride.startPosition, ride.endPosition]).filter((point) => point !== null);
+    if (!points.length) return {longitude: 0, latitude: 0, zoom: 1, pitch: 0, bearing: 0};
+    const longitudes = points.map((point) => point[0]);
+    const latitudes = points.map((point) => point[1]);
+    const bounds: [[number, number], [number, number]] = [[Math.min(...longitudes), Math.min(...latitudes)], [Math.max(...longitudes), Math.max(...latitudes)]];
+    const fitted = new WebMercatorViewport({width: Math.max(320, window.innerWidth - 300), height: Math.max(480, window.innerHeight * 0.64)}).fitBounds(bounds, {padding: 80, maxZoom: 15});
+    return {longitude: fitted.longitude, latitude: fitted.latitude, zoom: fitted.zoom, pitch: 0, bearing: 0};
   }, [rides]);
   const traced = useMemo(() => filtered.filter((ride) => ride.hasTrace), [filtered]);
   const fallback = useMemo(() => filtered.filter((ride) => !ride.hasTrace && ride.startPosition && ride.endPosition), [filtered]);

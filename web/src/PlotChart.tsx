@@ -18,7 +18,7 @@ export function PlotChart({rides, kind}: {rides: RideView[]; kind: 'duration' | 
       marginLeft: 42, marginBottom: 38,
       style: {background: 'transparent', color: '#d9e2dc', fontFamily: 'Inter, system-ui'},
       x: kind === 'month'
-        ? {label, tickFormat: (value) => monthly.findIndex((item) => item.month === value) % 12 === 0 ? value : ''}
+        ? {type: 'band', label, tickFormat: (value) => monthly.findIndex((item) => item.month === value) % Math.max(1, Math.ceil(monthly.length / 5)) === 0 ? value : ''}
         : {label, ticks: 6},
       y: {label: 'Rides', grid: true},
       marks: kind === 'month'

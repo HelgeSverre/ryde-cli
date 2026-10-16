@@ -13,7 +13,8 @@ for (const [location, entry] of Object.entries(lock.packages).sort(([a], [b]) =>
     const readme = fs.readdirSync(location).find((name) => /^readme\.md$/i.test(name));
     if (readme) {
       const content = fs.readFileSync(path.join(location, readme), 'utf8');
-      text = content.slice(content.search(/^##? License/im));
+      const position = content.search(/^##? License/im);
+      if (position >= 0) text = content.slice(position);
     }
   }
   if (!text) throw new Error(`Missing third-party license text: ${metadata.name}`);

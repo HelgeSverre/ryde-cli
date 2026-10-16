@@ -14,11 +14,21 @@ import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from socketserver import TCPServer
 from typing import Any
 
 from .client import RydeError
 
 ASSETS = Path(__file__).with_name("web")
+
+
+class LoopbackServer(ThreadingHTTPServer):
+    def server_bind(self) -> None:
+        # HTTPServer normally reverse-resolves its bound address. A fixed
+        # loopback-only service needs no DNS, which can stall on managed Macs.
+        TCPServer.server_bind(self)
+        self.server_name = "127.0.0.1"
+        self.server_port = self.server_address[1]
 
 
 def make_server(directory: Path, *, port: int = 0) -> tuple[ThreadingHTTPServer, str]:
@@ -105,7 +115,7 @@ def make_server(directory: Path, *, port: int = 0) -> tuple[ThreadingHTTPServer,
             self.end_headers()
             threading.Thread(target=self.server.shutdown, daemon=True).start()
 
-    server = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    server = LoopbackServer(("127.0.0.1", port), Handler)
     server.daemon_threads = True
     return server, f"http://127.0.0.1:{server.server_port}{prefix}"
 

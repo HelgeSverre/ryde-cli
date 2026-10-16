@@ -126,7 +126,9 @@ def main() -> None:
                 "state": "failed",
                 "stage": stage,
                 "error_type": type(exc).__name__,
-                "error": "Stats preparation failed. Check authentication and network access, then retry; cached routes are retained.",
+                "error": str(exc)
+                if stage == "dashboard" and isinstance(exc, RydeError)
+                else "Stats preparation failed. Check authentication and network access, then retry; cached routes are retained.",
             },
         )
 

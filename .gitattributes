@@ -1,0 +1,4 @@
+* text=auto eol=lf
+src/ryde_cli/web/assets/*.js linguist-generated=true
+src/ryde_cli/web/assets/*.css linguist-generated=true
+src/ryde_cli/web/assets/*.js -whitespace

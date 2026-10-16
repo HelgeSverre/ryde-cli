@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryde Stats"
+  short_description: "Fetch and map your authorized Ryde ride history"
+  default_prompt: "Use $ryde-stats to fetch my Ryde rides and open a private local dashboard."

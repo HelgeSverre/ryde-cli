@@ -1,12 +1,12 @@
-![Ryde CLI — Your rides. Your data.](docs/assets/header.png)
+![Ryde CLI — Your rides. Your data.](https://raw.githubusercontent.com/HelgeSverre/ryde-cli/main/docs/assets/header.png)
 
 # Ryde CLI
 
 [![CI](https://github.com/HelgeSverre/ryde-cli/actions/workflows/ci.yml/badge.svg)](https://github.com/HelgeSverre/ryde-cli/actions/workflows/ci.yml)
 [![Dependency audit](https://github.com/HelgeSverre/ryde-cli/actions/workflows/audit.yml/badge.svg)](https://github.com/HelgeSverre/ryde-cli/actions/workflows/audit.yml)
 [![CodeQL](https://github.com/HelgeSverre/ryde-cli/actions/workflows/codeql.yml/badge.svg)](https://github.com/HelgeSverre/ryde-cli/actions/workflows/codeql.yml)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](pyproject.toml)
-[![MIT license](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://github.com/HelgeSverre/ryde-cli/blob/main/pyproject.toml)
+[![MIT license](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/HelgeSverre/ryde-cli/blob/main/LICENSE)
 [![uv](https://img.shields.io/badge/managed%20with-uv-de5fe9.svg)](https://docs.astral.sh/uv/)
 
 An unofficial CLI, local map dashboard, and MCP server for your Ryde account.
@@ -16,7 +16,7 @@ compare RidePass costs.
 Login uses SMS. Account commands are read only.
 
 [Quick start](#quick-start) · [Dashboard](#map-your-rides) · [Commands](#all-commands) ·
-[MCP](#mcp-server) · [Claude / Codex](docs/agents.md) · [Development](CONTRIBUTING.md)
+[MCP](#mcp-server) · [Claude / Codex](https://github.com/HelgeSverre/ryde-cli/blob/main/docs/agents.md) · [Development](https://github.com/HelgeSverre/ryde-cli/blob/main/CONTRIBUTING.md)
 
 ## Quick start
 
@@ -45,7 +45,7 @@ uv run ryde stats
 
 The examples below use `uv run` from a checkout. To run them anywhere, replace
 `uv run` with `uvx --from git+https://github.com/HelgeSverre/ryde-cli`.
-For a persistent installation, see [distribution](docs/distribution.md).
+For a persistent installation, see [distribution](https://github.com/HelgeSverre/ryde-cli/blob/main/docs/distribution.md).
 **This project has not been published to PyPI yet.**
 
 ## Login
@@ -107,18 +107,18 @@ The server uses a random `127.0.0.1` URL and serves only its dataset and bundled
 UI. Treat the URL as private. OpenFreeMap supplies public map tiles; no Ryde
 token or ride records are sent to it, but tile requests reveal the viewed area.
 Remote agents cannot expose their loopback URL on a user's laptop automatically.
-See [dashboard storage and automation](docs/dashboard.md).
+See [dashboard storage and automation](https://github.com/HelgeSverre/ryde-cli/blob/main/docs/dashboard.md).
 
 ## Dashboard preview
 
-![Ryde Stats showing a ride map, filters, and charts with 180 generated demo rides](docs/assets/dashboard.png)
+![Ryde Stats showing a ride map, filters, and charts with 180 generated demo rides](https://raw.githubusercontent.com/HelgeSverre/ryde-cli/main/docs/assets/dashboard.png)
 
 *180 generated demo rides, including 135 route traces.*
 
 ## All commands
 
 Every row below is prefixed with `uv run ryde`. The
-[full command reference](docs/commands.md) includes every flag and help screen.
+[full command reference](https://github.com/HelgeSverre/ryde-cli/blob/main/docs/commands.md) includes every flag and help screen.
 
 | Command | Purpose / command-specific arguments |
 | --- | --- |
@@ -254,7 +254,7 @@ dataset immediately. This lets large exports complete without one long tool call
 Resources: `ryde://account/summary` and `ryde://city/{city_id}/passes`.
 
 For MCP registration commands and the bundled workflow skill, see
-[Claude Code and Codex setup](docs/agents.md). From a checkout, explicit skill installation is:
+[Claude Code and Codex setup](https://github.com/HelgeSverre/ryde-cli/blob/main/docs/agents.md). From a checkout, explicit skill installation is:
 
 ```sh
 uv run ryde skill --agent codex --scope user
@@ -265,7 +265,7 @@ Skill setup and MCP registration are separate steps.
 
 ## Configuration
 
-[config.example.json](config.example.json) documents non-secret config fields.
+[config.example.json](https://github.com/HelgeSverre/ryde-cli/blob/main/config.example.json) documents non-secret config fields.
 Login creates the real config; copying the example does not authenticate you.
 
 | Setting | CLI / environment | Notes |
@@ -282,7 +282,7 @@ Login creates the real config; copying the example does not authenticate you.
 Use only an account you own or are authorized to access. Keep configs and
 exports out of version control. Data may contain private identifiers beyond
 GPS, so review output before sharing it with another person or an AI agent.
-See [API compatibility](docs/api.md) for request signing and endpoint mapping.
+See [API compatibility](https://github.com/HelgeSverre/ryde-cli/blob/main/docs/api.md) for request signing and endpoint mapping.
 
 ## Shell completion
 
@@ -319,10 +319,9 @@ eval "$(uv run register-python-argcomplete ryde)"
 
 ## Development and distribution
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for uv setup, tests, linting, and packaging.
+See [CONTRIBUTING.md](https://github.com/HelgeSverre/ryde-cli/blob/main/CONTRIBUTING.md) for uv setup, tests, linting, and packaging.
 CI tests Python 3.11–3.14 on Linux and Python 3.14 on macOS, checks generated docs,
 builds and smoke-tests distributions, and runs dependency audits and CodeQL.
 
-GitHub distribution works with `uvx` today. See the [distribution plan](docs/distribution.md)
-for the remaining PyPI setup and Trusted Publishing steps. Publishing is not
-currently enabled. Licensed under [MIT](LICENSE).
+GitHub distribution works with `uvx` today. See [distribution and releases](https://github.com/HelgeSverre/ryde-cli/blob/main/docs/distribution.md)
+for installation options and the PyPI release workflow. Licensed under [MIT](https://github.com/HelgeSverre/ryde-cli/blob/main/LICENSE).

@@ -31,8 +31,9 @@ Signing is not a substitute for server-side access controls.
 | City fares | `getFeeRuleByCityId` |
 | Python client automatic-pass status | `getUserAutoBuy` (read only; no CLI or MCP command) |
 
-Ride history fetches current and archived year partitions from 2024 onward,
-deduplicates by `useId`, and filters locally by date. Pass/recharge history
+Ride history fetches current and archived year partitions starting from the
+requested start date's year through the current year at most, deduplicates by
+`useId`, and filters locally by date. Pass/recharge history
 uses the app's successful-history filters (`reStatus=4`, `getType=1`);
 RidePass purchases have `reType=7`.
 

@@ -6,11 +6,12 @@ import datetime as dt
 import json
 import logging
 import sys
+from functools import wraps
 from typing import Any
 
 from .analysis import recommend_passes, summarize_rides
 from .client import RydeClient, RydeError
-from .config import ConfigStore
+from .config import ConfigError, ConfigStore
 
 # Never write protocol messages to stdout. The MCP SDK owns stdout; diagnostics
 # use stderr only. A client can configure token/base URL via environment/config.
@@ -25,7 +26,10 @@ def _client() -> RydeClient:
 
 
 def _date(value: str | None) -> dt.date | None:
-    return dt.date.fromisoformat(value) if value else None
+    try:
+        return dt.date.fromisoformat(value) if value else None
+    except ValueError:
+        raise RydeError("dates must use YYYY-MM-DD") from None
 
 
 def _json(value: Any) -> str:
@@ -34,45 +38,61 @@ def _json(value: Any) -> str:
 
 def create_server() -> Any:
     """Build a typed stdio server with no mutation-capable tools."""
-    # MCP SDK 1.x exposes FastMCP; the newer SDK documentation names the
-    # equivalent class MCPServer. Support either public SDK shape so the
-    # packaged current version stays usable while future v2 upgrades work.
-    try:
-        from mcp.server import MCPServer
-    except ImportError:
-        from mcp.server import FastMCP as MCPServer
-
+    from mcp.server import MCPServer
+    from mcp.server.mcpserver.exceptions import ResourceError, ToolError
     from mcp.types import ToolAnnotations
 
     mcp = MCPServer("ryde-readonly")
+
+    # Register wrapped functions through the public API so their schemas stay
+    # intact and expected errors remain readable under MCP SDK 2.x.
+    def expected_errors(error_type: type[Exception]) -> Any:
+        def decorate(function: Any) -> Any:
+            @wraps(function)
+            def call(*args: Any, **kwargs: Any) -> Any:
+                try:
+                    return function(*args, **kwargs)
+                except (RydeError, ConfigError) as exc:
+                    raise error_type(str(exc)) from exc
+
+            return call
+
+        return decorate
+
+    def tool(**options: Any) -> Any:
+        def register(function: Any) -> Any:
+            return mcp.tool(**options)(expected_errors(ToolError)(function))
+
+        return register
+
     read_only = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True)
 
-    @mcp.tool(annotations=read_only)
+    @tool(annotations=read_only)
     def account_profile() -> dict[str, Any]:
         """Return the signed-in owner's profile/account record. Read-only."""
         return _client().profile()
 
-    @mcp.tool(annotations=read_only)
+    @tool(annotations=read_only)
     def current_ride() -> dict[str, Any]:
         """Return current ride status only; this never starts, ends, or alters a ride."""
         return _client().active_ride()
 
-    @mcp.tool(annotations=read_only)
+    @tool(annotations=read_only)
     def list_rides(start: str | None = None, end: str | None = None) -> list[dict[str, Any]]:
         """List completed rides. Dates are inclusive YYYY-MM-DD; omit for all available history."""
         return _client().rides(_date(start), _date(end))
 
-    @mcp.tool(annotations=read_only)
+    @tool(annotations=read_only)
     def ride_detail(use_id: str) -> dict[str, Any]:
         """Fetch detail for one completed ride ID. Read-only."""
         return _client().ride_detail(use_id)
 
-    @mcp.tool(annotations=read_only)
+    @tool(annotations=read_only)
     def ride_order(order_id: str) -> dict[str, Any]:
         """Fetch linked order/charge detail for a completed ride. Read-only."""
         return _client().ride_order(order_id)
 
-    @mcp.tool(annotations=read_only)
+    @tool(annotations=read_only)
     def ride_route(use_id: str, include_sensitive_location: bool = False) -> dict[str, Any]:
         """Fetch stored route GPS only after explicit sensitive-location acknowledgement."""
         if not include_sensitive_location:
@@ -81,17 +101,17 @@ def create_server() -> Any:
             )
         return _client().route(use_id)
 
-    @mcp.tool(annotations=read_only)
+    @tool(annotations=read_only)
     def pass_catalogue(city_id: int) -> dict[str, Any]:
         """Return current RidePass products, prices, allowances and validity for a city."""
         return _client().pass_catalogue(city_id)
 
-    @mcp.tool(annotations=read_only)
+    @tool(annotations=read_only)
     def owned_passes() -> dict[str, Any]:
         """Return active/current passes owned by the signed-in account."""
         return _client().owned_passes()
 
-    @mcp.tool(annotations=read_only)
+    @tool(annotations=read_only)
     def recharge_history(all_pages: bool = False, page: int = 0) -> Any:
         """Return pass/recharge purchase history. all_pages may make multiple read-only requests."""
         client = _client()
@@ -99,12 +119,12 @@ def create_server() -> Any:
             return client.fetch_pages("recharge", ("recharges", "rechargeOrders", "orders", "data"))
         return client.recharge_history(page)
 
-    @mcp.tool(annotations=read_only)
+    @tool(annotations=read_only)
     def recharge_detail(recharge_id: str) -> dict[str, Any]:
         """Return one recharge/pass receipt by its recharge ID. Read-only."""
         return _client().recharge_detail(recharge_id)
 
-    @mcp.tool(annotations=read_only)
+    @tool(annotations=read_only)
     def vipps_payment_history(all_pages: bool = False, page: int = 0) -> Any:
         """Return read-only Vipps payment-order history for the signed-in account."""
         client = _client()
@@ -114,27 +134,27 @@ def create_server() -> Any:
             )
         return client.vipps_payments(page)
 
-    @mcp.tool(annotations=read_only)
+    @tool(annotations=read_only)
     def account_month_amount(month: str) -> dict[str, Any]:
         """Return account amount data for YYYY-MM. Read-only."""
         return _client().month_amount(month)
 
-    @mcp.tool(annotations=read_only)
+    @tool(annotations=read_only)
     def recharge_month(month: str) -> dict[str, Any]:
         """Return recharge data for YYYY-MM. Read-only."""
         return _client().recharge_month(month)
 
-    @mcp.tool(annotations=read_only)
+    @tool(annotations=read_only)
     def city_fee_rule(city_id: int) -> dict[str, Any]:
         """Return fee/fare rules for a city. Read-only."""
         return _client().fee_rule(city_id)
 
-    @mcp.tool(annotations=read_only)
+    @tool(annotations=read_only)
     def ride_summary(start: str | None = None, end: str | None = None) -> dict[str, Any]:
         """Compute local ride totals, distance, duration, discounts, monthly trend and averages."""
         return summarize_rides(_client().rides(_date(start), _date(end)))
 
-    @mcp.tool(annotations=read_only)
+    @tool(annotations=read_only)
     def recommend_ridepass(
         city_id: int, start: str | None = None, end: str | None = None
     ) -> dict[str, Any]:
@@ -146,7 +166,7 @@ def create_server() -> Any:
             client.fee_rule(city_id),
         )
 
-    @mcp.tool(
+    @tool(
         annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False)
     )
     def prepare_stats(
@@ -160,7 +180,7 @@ def create_server() -> Any:
         config = ConfigStore()
         return start_job(config, include_location=include_sensitive_location, start=start, end=end)
 
-    @mcp.tool(annotations=read_only)
+    @tool(annotations=read_only)
     def stats_job_status(job_id: str) -> dict[str, Any]:
         """Poll a background stats job. completed results contain counts and, for open_stats, a local dashboard URL."""
         from .stats import dataset_path
@@ -169,7 +189,7 @@ def create_server() -> Any:
         config = ConfigStore()
         return job_status(dataset_path(config, config.token()), job_id)
 
-    @mcp.tool(
+    @tool(
         annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False)
     )
     def open_stats(
@@ -202,7 +222,7 @@ def create_server() -> Any:
             **open_dashboard(directory, ttl=ttl, open_browser=open_browser),
         }
 
-    @mcp.tool(
+    @tool(
         annotations=ToolAnnotations(readOnlyHint=False, destructiveHint=False, idempotentHint=False)
     )
     def close_stats(url: str) -> dict[str, bool]:
@@ -212,11 +232,13 @@ def create_server() -> Any:
         return close_dashboard(url)
 
     @mcp.resource("ryde://account/summary")
+    @expected_errors(ResourceError)
     def account_summary_resource() -> str:
         """JSON ride summary for all available history of the configured account."""
         return _json(summarize_rides(_client().rides()))
 
     @mcp.resource("ryde://city/{city_id}/passes")
+    @expected_errors(ResourceError)
     def city_pass_resource(city_id: str) -> str:
         """JSON current RidePass catalogue for a city."""
         return _json(_client().pass_catalogue(city_id))

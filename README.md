@@ -149,8 +149,9 @@ Every row below is prefixed with `uv run ryde`. The
 `owned-passes`, `recharges`, `vipps`, `fee-rule`, `summary`, and `recommendation`.
 For city-specific exports, pass `--city-id` explicitly; its export default is `15`.
 Page numbering starts at `0`. Date ranges are inclusive and default to
-`2018-01-01` through today, but the API client fetches year partitions from
-2024 onward. Missing older history cannot be recovered by changing `--start`.
+`2018-01-01` through today. Ride fetching starts with the requested start year's
+archive and includes the current partition when applicable. Future-year
+partitions are skipped. Available history depends on what Ryde retains.
 
 Global options are `--config FILE`, `--base-url URL`, and `--mobile-type TEXT`.
 All commands support `--format json|csv|tsv|table`; all data commands also
@@ -232,7 +233,7 @@ For clients that accept an `mcpServers` JSON configuration:
 ```
 
 Use an absolute path to `uvx` if a desktop app cannot find it on `PATH`. For
-reproducible deployments, pin the package version (`ryde-cli==0.1.0`).
+reproducible deployments, pin the package version (`ryde-cli==0.1.1`).
 The server uses stdout for MCP messages and stderr for diagnostics.
 
 | Tools | Purpose |
@@ -311,8 +312,8 @@ eval "$(uv run register-python-argcomplete ryde)"
   bypass the challenge.
 - **Duplicate SMS refused:** wait one minute. Use `--force` only when you know
   the previous request did not reach Ryde.
-- **Missing history:** try `--all` for payment/pass history. Ride fetching
-  already includes archived partitions from 2024 onward.
+- **Missing history:** try `--all` for payment/pass history. For rides, set
+  `--start` to include the years you want; the default starts in 2018.
 - **Insecure config permissions:** on macOS/Linux, run `chmod 600 /path/to/config.json`.
 - **MCP authentication fails:** check that login and the server use the same
   `RYDE_CONFIG`, then restart the MCP client.

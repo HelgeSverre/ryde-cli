@@ -1,9 +1,81 @@
 import base64
+import datetime as dt
+import io
 
 import pytest
 
 from ryde_cli.analysis import recommend_passes, summarize_rides
 from ryde_cli.client import RydeError, aes_base64, normalise_phone, time_sign
+
+
+@pytest.mark.parametrize("body", [b"synthetic-private-data", b"\xffsynthetic-private-data"])
+def test_invalid_api_json_has_a_safe_error(monkeypatch, body):
+    from ryde_cli.client import RydeClient
+
+    monkeypatch.setattr("urllib.request.urlopen", lambda *a, **kw: io.BytesIO(body))
+    with pytest.raises(RydeError, match="invalid JSON") as result:
+        RydeClient(token="synthetic-token").profile()
+    assert "synthetic-private-data" not in str(result.value)
+
+
+@pytest.mark.parametrize("failure", [TimeoutError(), ConnectionResetError()])
+def test_api_response_read_failures_have_domain_errors(monkeypatch, failure):
+    from ryde_cli.client import RydeClient
+
+    class FailingResponse(io.BytesIO):
+        def read(self, *args):
+            raise failure
+
+    monkeypatch.setattr("urllib.request.urlopen", lambda *a, **kw: FailingResponse())
+    with pytest.raises(RydeError, match="timed out|could not read the API response"):
+        RydeClient(token="synthetic-token").profile()
+
+
+def test_ride_history_fetches_older_archives_paginates_and_deduplicates(monkeypatch):
+    from ryde_cli.client import RydeClient
+
+    calls = []
+    first_page = [
+        {"useId": str(index), "startTime": f"2019-01-01 10:{index:02}:00"} for index in range(15)
+    ]
+
+    def post(self, path, fields):
+        calls.append((fields["year"], fields["num"]))
+        if (fields["year"], fields["num"]) == (2019, 0):
+            return {"userUses": first_page}
+        if (fields["year"], fields["num"]) == (2019, 1):
+            return {
+                "userUses": [
+                    {**first_page[0], "paidNum": "100"},
+                    {"useId": "older", "startTime": "2018-12-31 10:00:00"},
+                ]
+            }
+        return {"userUses": []}
+
+    monkeypatch.setattr(RydeClient, "post", post)
+    rides = RydeClient(token="synthetic").rides(dt.date(2019, 1, 1), dt.date(2020, 1, 1))
+    assert calls == [(2019, 0), (2019, 1), (2020, 0)]
+    assert len(rides) == 15
+    assert rides[0]["paidNum"] == "100"
+
+
+def test_future_end_date_does_not_fetch_future_year_partitions(monkeypatch):
+    from ryde_cli.client import RydeClient
+
+    today = dt.date.today()
+    calls = []
+
+    def post(self, path, fields):
+        calls.append(fields["year"])
+        return {"userUses": []}
+
+    monkeypatch.setattr(RydeClient, "post", post)
+    client = RydeClient(token="synthetic")
+    assert client.rides(dt.date(today.year, 1, 1), dt.date(today.year + 2, 1, 1)) == []
+    assert calls == [""]
+    calls.clear()
+    assert client.rides(dt.date(today.year + 1, 1, 1), dt.date(today.year + 2, 1, 1)) == []
+    assert calls == []
 
 
 def test_signing_matches_verified_live_test_vector() -> None:

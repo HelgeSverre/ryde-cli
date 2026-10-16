@@ -49,6 +49,31 @@ def test_json_export_preserves_lists_and_owner_only_permissions(tmp_path, capsys
     assert "Wrote" in output.err
 
 
+@pytest.mark.parametrize("fmt", ["json", "csv", "tsv", "table"])
+def test_export_write_failures_have_cli_errors(tmp_path, monkeypatch, capsys, fmt):
+    class Client:
+        def profile(self):
+            return {"id": "synthetic"}
+
+    blocker = tmp_path / "file"
+    blocker.write_text("existing file")
+    monkeypatch.setattr("ryde_cli.cli.client_from", lambda _: (Client(), None))
+    with pytest.raises(SystemExit) as result:
+        main(["account", "profile", "--format", fmt, "--output", str(blocker / "export")])
+    assert result.value.code == 1
+    assert "error: could not write file" in capsys.readouterr().err
+    assert blocker.read_text() == "existing file"
+
+
+def test_skill_parent_file_has_a_cli_error(tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".agents").write_text("existing file")
+    with pytest.raises(SystemExit) as result:
+        main(["skill", "--agent", "codex"])
+    assert result.value.code == 1
+    assert "could not install skill" in capsys.readouterr().err
+
+
 def test_stats_fetch_only_does_not_launch_server(monkeypatch, tmp_path, capsys):
     from ryde_cli.client import RydeClient
     from ryde_cli.config import ConfigStore

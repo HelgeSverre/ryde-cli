@@ -37,7 +37,7 @@ jobs:
       - run: uv run ruff format --check .
       - run: uv run pytest
       - run: uv run scripts/generate_command_reference.py --check
-      - run: uv build
+      - run: uv build --clear
       - run: uv run scripts/check_public_tree.py
       - run: uvx --from twine twine check --strict dist/*
       - name: Smoke test installed wheel and source archive

@@ -119,6 +119,12 @@ class RydeClient:
             raise RydeError(f"{path}: server rejected request (HTTP {exc.code})") from None
         except urllib.error.URLError as exc:
             raise RydeError(f"{path}: network error: {exc.reason}") from exc
+        except TimeoutError:
+            raise RydeError(f"{path}: network request timed out") from None
+        except OSError as exc:
+            raise RydeError(f"{path}: could not read the API response") from exc
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            raise RydeError(f"{path}: server returned invalid JSON") from None
         if not isinstance(data, dict):
             raise RydeError(f"{path}: expected a JSON object")
         status = data.get("status")
@@ -214,17 +220,18 @@ class RydeClient:
     ) -> list[dict[str, Any]]:
         """Fetch archived and current ride partitions, deduplicated by useId."""
         start = start or dt.date(2018, 1, 1)
-        end = end or dt.date.today()
+        today = dt.date.today()
+        end = end or today
         if start > end:
             raise RydeError("start date must not be after end date")
         collected: list[dict[str, Any]] = []
-        for year in range(max(2024, start.year), end.year + 1):
+        for year in range(start.year, min(end.year, today.year) + 1):
             page = 0
             while True:
                 result = self.post(
                     "/appRyde/getUserAllUseLog",
                     {
-                        "year": "" if year == dt.date.today().year else year,
+                        "year": "" if year == today.year else year,
                         "num": page,
                         "startTime": "",
                         "endTime": "",

@@ -48,7 +48,7 @@ client before enabling access to personal data.
 [Claude MCP documentation](https://code.claude.com/docs/en/mcp).
 
 Desktop applications may require the absolute path to `uvx` if their PATH does
-not match the shell's. Pin the package version, for example `ryde-cli==0.1.0`, for repeatable setups.
+not match the shell's. Pin the package version, for example `ryde-cli==0.1.1`, for repeatable setups.
 The MCP server shares the CLI's default config automatically; no token belongs
 in a reusable MCP definition.
 

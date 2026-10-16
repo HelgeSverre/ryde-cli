@@ -10,7 +10,7 @@ from ryde_cli.client import RydeError
 from ryde_cli.config import ConfigStore
 from ryde_cli.dashboard_server import close_dashboard
 from ryde_cli.stats import dataset_path
-from ryde_cli.stats_job import job_status, start_job
+from ryde_cli.stats_job import job_status, main, start_job
 
 
 def test_background_fetch_open_and_stop_use_synthetic_loopback_api(tmp_path, monkeypatch):
@@ -92,3 +92,39 @@ def test_job_requires_auth_and_rejects_path_traversal(tmp_path):
         start_job(ConfigStore())
     with pytest.raises(RydeError, match="invalid"):
         job_status(tmp_path, "../config")
+
+
+def test_spawn_failure_records_a_failed_job(tmp_path, monkeypatch):
+    store = ConfigStore(str(tmp_path / "config.json"))
+    store.data = {"token": "synthetic-job-token"}
+
+    def deny_spawn(*args, **kwargs):
+        raise PermissionError("synthetic-private-error")
+
+    monkeypatch.setattr("ryde_cli.stats_job.subprocess.Popen", deny_spawn)
+    with pytest.raises(RydeError, match="could not start stats worker"):
+        start_job(store)
+    files = list((dataset_path(store, store.token()) / ".jobs").glob("*.json"))
+    assert len(files) == 1
+    status = job_status(dataset_path(store, store.token()), files[0].stem)
+    assert status["state"] == "failed"
+    assert status["stage"] == "startup"
+    assert "synthetic-private-error" not in json.dumps(status)
+
+
+def test_worker_config_failure_does_not_leave_job_queued(tmp_path, monkeypatch):
+    config = tmp_path / "config.json"
+    config.write_bytes(b"\xffsynthetic-private-config")
+    config.chmod(0o600)
+    directory = tmp_path / "dataset"
+    job_id = "a" * 32
+    monkeypatch.setattr(
+        "sys.argv",
+        ["stats-job", "--config", str(config), "--data-dir", str(directory), "--job-id", job_id],
+    )
+    main()
+    status = job_status(directory, job_id)
+    assert status["state"] == "failed"
+    assert status["stage"] == "setup"
+    assert status["error_type"] == "ConfigError"
+    assert "synthetic-private-config" not in json.dumps(status)

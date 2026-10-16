@@ -20,5 +20,14 @@ def install_skill(agent: str, scope: str, *, force: bool = False) -> dict[str, s
             raise RydeError(f"skill already exists at {target}; use --force to replace its files")
         if target.is_symlink():
             raise RydeError("refusing to overwrite a symlinked skill; update its source instead")
-    shutil.copytree(SOURCE, target, dirs_exist_ok=True)
+        if not target.is_dir():
+            raise RydeError(f"skill destination is not a directory: {target}")
+    try:
+        shutil.copytree(SOURCE, target, dirs_exist_ok=True)
+    except shutil.Error:
+        raise RydeError(
+            f"could not install skill at {target}; check destination permissions"
+        ) from None
+    except OSError as exc:
+        raise RydeError(f"could not install skill at {target}: {exc.strerror or exc}") from exc
     return {"path": str(target), "status": "installed"}

@@ -42,9 +42,12 @@ def start_job(
 ) -> dict[str, Any]:
     if not config.token():
         raise RydeError("log in with uv run ryde login before preparing stats")
-    for value in (start, end):
-        if value:
-            dt.date.fromisoformat(value)
+    try:
+        for value in (start, end):
+            if value:
+                dt.date.fromisoformat(value)
+    except ValueError:
+        raise RydeError("dates must use YYYY-MM-DD") from None
     if not 1 <= ttl <= 86400:
         raise RydeError("ttl must be 1–86400 seconds")
     directory = dataset_path(config, config.token())
@@ -63,6 +66,8 @@ def start_job(
         str(config.path.resolve()),
         "--job-id",
         job_id,
+        "--data-dir",
+        str(directory.resolve()),
         "--ttl",
         str(ttl),
     ]
@@ -75,13 +80,27 @@ def start_job(
         command.append("--open")
     if open_browser:
         command.append("--browser")
-    subprocess.Popen(
-        command,
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        start_new_session=True,
-    )
+    try:
+        subprocess.Popen(
+            command,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            start_new_session=True,
+        )
+    except OSError as exc:
+        error = "could not start stats worker"
+        secure_write_json(
+            status,
+            {
+                **result,
+                "state": "failed",
+                "stage": "startup",
+                "error_type": type(exc).__name__,
+                "error": error,
+            },
+        )
+        raise RydeError(error) from None
     return result
 
 
@@ -89,6 +108,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", required=True)
     parser.add_argument("--job-id", required=True)
+    parser.add_argument("--data-dir", type=Path, required=True)
     parser.add_argument("--include-location", action="store_true")
     parser.add_argument("--start")
     parser.add_argument("--end")
@@ -96,13 +116,16 @@ def main() -> None:
     parser.add_argument("--open", action="store_true")
     parser.add_argument("--browser", action="store_true")
     args = parser.parse_args()
-    config = ConfigStore(args.config)
-    token = config.token()
-    directory = dataset_path(config, token)
-    path = status_path(directory, args.job_id)
+    path = status_path(args.data_dir, args.job_id)
     secure_write_json(path, {"job_id": args.job_id, "state": "running"})
-    stage = "fetch"
+    stage = "setup"
     try:
+        config = ConfigStore(args.config)
+        token = config.token()
+        directory = dataset_path(config, token)
+        if directory.resolve() != args.data_dir.resolve():
+            raise RydeError("login changed before the stats worker started")
+        stage = "fetch"
         client = RydeClient(
             token=token, base_url=config.base_url(), mobile_type=config.mobile_type()
         )
@@ -128,6 +151,8 @@ def main() -> None:
                 "error_type": type(exc).__name__,
                 "error": str(exc)
                 if stage == "dashboard" and isinstance(exc, RydeError)
+                else "Stats setup failed. Check the local configuration and data directory permissions."
+                if stage == "setup"
                 else "Stats preparation failed. Check authentication and network access, then retry; cached routes are retained.",
             },
         )

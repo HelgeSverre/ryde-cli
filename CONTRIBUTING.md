@@ -12,8 +12,8 @@ uv run pytest --cov=ryde_cli --cov-report=term-missing
 uv run ruff check .
 uv run ruff format --check .
 uv run scripts/generate_command_reference.py --check
-uv build
-uvx --from ./dist/ryde_cli-0.1.0-py3-none-any.whl ryde --version
+uv build --clear
+uvx --from ./dist/*.whl ryde --version
 ```
 
 Tests use synthetic data and mocked requests. They must never require an account,
@@ -39,12 +39,13 @@ requests, and a weekly schedule.
 Never commit config files, tokens, real phone numbers, exports, routes, addresses,
 or payment references. Share minimal synthetic fixtures when reporting bugs.
 
-See [the distribution plan](docs/distribution.md) before preparing a release.
+See [distribution and releases](docs/distribution.md) before preparing a release.
 
 
 ## Dashboard changes
 
-The frontend source is `web/`; end users receive precompiled assets. After
+Use Node 24 for frontend development, matching CI. The frontend source is
+`web/`; end users receive precompiled assets. After
 editing it, run `npm ci`, `npm test`, `npm run build`, and `npm run test:e2e`
 inside `web/`. Commit `src/ryde_cli/web/` with the source changes. Builds include
 third-party license notices and never read private `public/data`. CI verifies

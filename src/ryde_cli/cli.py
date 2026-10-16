@@ -9,7 +9,6 @@ import getpass
 import json
 import os
 import sys
-import tempfile
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -18,7 +17,7 @@ from typing import Any
 from . import __version__
 from .analysis import recommend_passes, summarize_rides
 from .client import AuthenticationRequired, RydeClient, RydeError, normalise_phone
-from .config import ConfigError, ConfigStore, secure_write_json
+from .config import ConfigError, ConfigStore, secure_write_json, secure_write_text
 
 
 def date_arg(value: str) -> dt.date:
@@ -95,25 +94,10 @@ def render(value: Any, fmt: str, output: str | None = None) -> None:
             content = "\n".join([line, divider, *body]) + "\n"
     if output:
         path = Path(output).expanduser()
-        secure_write_json(path, value) if fmt == "json" else _secure_write_text(path, content)
+        secure_write_json(path, value) if fmt == "json" else secure_write_text(path, content)
         print(f"Wrote {path} with permissions 0600.", file=sys.stderr)
     else:
         sys.stdout.write(content)
-
-
-def _secure_write_text(path: Path, content: str) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, temporary_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
-    temporary = Path(temporary_name)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            handle.write(content)
-        os.chmod(temporary, 0o600)
-        os.replace(temporary, path)
-        os.chmod(path, 0o600)
-    finally:
-        if temporary.exists():
-            temporary.unlink(missing_ok=True)
 
 
 def response_list(response: dict[str, Any]) -> list[dict[str, Any]]:

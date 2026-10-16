@@ -37,28 +37,38 @@ def secure_read_json(path: Path) -> dict[str, Any]:
         result = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return {}
-    except json.JSONDecodeError as exc:
+    except OSError as exc:
+        raise ConfigError(
+            f"could not read configuration file {path}: {exc.strerror or exc}"
+        ) from exc
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
         raise ConfigError(f"could not parse configuration file {path}") from exc
     if not isinstance(result, dict):
         raise ConfigError(f"configuration file {path} must contain a JSON object")
     return result
 
 
-def secure_write_json(path: Path, value: dict[str, Any]) -> None:
-    """Atomically save local secrets with owner-only permissions."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
-    temp = Path(temp_name)
+def secure_write_text(path: Path, content: str) -> None:
+    """Atomically write an owner-only file, reporting filesystem failures."""
     try:
-        with os.fdopen(fd, "w", encoding="utf-8") as handle:
-            json.dump(value, handle, ensure_ascii=False, indent=2, sort_keys=True)
-            handle.write("\n")
-        os.chmod(temp, 0o600)
-        os.replace(temp, path)
-        os.chmod(path, 0o600)
-    finally:
-        if temp.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd, temp_name = tempfile.mkstemp(prefix=f".{path.name}.", dir=path.parent)
+        temp = Path(temp_name)
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as handle:
+                handle.write(content)
+            os.chmod(temp, 0o600)
+            os.replace(temp, path)
+            os.chmod(path, 0o600)
+        finally:
             temp.unlink(missing_ok=True)
+    except OSError as exc:
+        raise ConfigError(f"could not write file {path}: {exc.strerror or exc}") from exc
+
+
+def secure_write_json(path: Path, value: Any) -> None:
+    """Atomically save JSON with owner-only permissions."""
+    secure_write_text(path, json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n")
 
 
 class ConfigStore:

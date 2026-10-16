@@ -82,7 +82,7 @@ jobs:
         with:
           enable-cache: true
           python-version: '3.14'
-      - run: uv build
+      - run: uv build --clear
       - run: uv run scripts/check_public_tree.py
       - run: uvx --from twine twine check --strict dist/*
       - name: Smoke test installed wheel and source archive

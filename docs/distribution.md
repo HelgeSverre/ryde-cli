@@ -15,7 +15,7 @@ For a persistent installation:
 uv tool install ryde-cli
 ```
 
-Pin a version with `--from ryde-cli==0.1.0`. Upgrade a persistent installation
+Pin a version with `--from ryde-cli==0.1.1`. Upgrade a persistent installation
 with `uv tool upgrade ryde-cli`.
 
 ## Install from GitHub
@@ -23,10 +23,10 @@ with `uv tool upgrade ryde-cli`.
 To run a particular source revision:
 
 ```sh
-uvx --from git+https://github.com/HelgeSverre/ryde-cli@v0.1.0 ryde --help
+uvx --from git+https://github.com/HelgeSverre/ryde-cli@v0.1.1 ryde --help
 ```
 
-Replace `v0.1.0` with a commit or tag. Git-based installation requires Git.
+Replace `v0.1.1` with a commit or tag. Git-based installation requires Git.
 
 ## PyPI configuration
 
@@ -69,14 +69,14 @@ uv run pytest
 uv run ruff check .
 uv run ruff format --check .
 uv run scripts/generate_command_reference.py --check
-uv build
+uv build --clear
 uv run scripts/check_public_tree.py
 uvx --from twine twine check --strict dist/*
 ```
 
 ## Publish a version
 
-1. Update the version in `pyproject.toml`, run `uv lock`, update `CHANGELOG.md`,
+1. Set the version with `uv version <version>`, update `CHANGELOG.md`,
    and push the changes to `main`.
 2. Wait for CI and the manual publishing validation to pass for that commit.
 3. Create a GitHub release with tag `v<version>`, targeting that commit. Review

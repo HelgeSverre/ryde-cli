@@ -14,7 +14,7 @@ Unofficial account-data CLI, local map dashboard, and stdio MCP server.
   under `src/ryde_cli/web/`. `publicDir: false` prevents copying private data.
   Rebuild with `npm ci` and `npm run build` inside `web/` after frontend edits.
 - Run `uv run pytest`, `uv run ruff check .`, `uv run ruff format --check .`,
-  `uv run scripts/generate_command_reference.py --check`, and `uv build`.
+  `uv run scripts/generate_command_reference.py --check`, and `uv build --clear`.
 - Keep the CLI/MCP account operations read only. Login may send an explicitly
   requested SMS. Route traces require explicit location acknowledgement.
 - The portable user workflow skill is `src/ryde_cli/agent_skill/SKILL.md`,

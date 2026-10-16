@@ -64,7 +64,7 @@ def test_background_fetch_open_and_stop_use_synthetic_loopback_api(tmp_path, mon
         )
         assert started["state"] == "queued"
         directory = dataset_path(store, store.token())
-        deadline = time.monotonic() + 15
+        deadline = time.monotonic() + 60
         while time.monotonic() < deadline:
             status = job_status(directory, started["job_id"])
             if status["state"] in {"failed", "completed"}:

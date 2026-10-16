@@ -101,6 +101,7 @@ def main() -> None:
     directory = dataset_path(config, token)
     path = status_path(directory, args.job_id)
     secure_write_json(path, {"job_id": args.job_id, "state": "running"})
+    stage = "fetch"
     try:
         client = RydeClient(
             token=token, base_url=config.base_url(), mobile_type=config.mobile_type()
@@ -113,15 +114,18 @@ def main() -> None:
             include_location=args.include_location,
         )
         if args.open:
+            stage = "dashboard"
             result.update(open_dashboard(directory, ttl=args.ttl, open_browser=args.browser))
         secure_write_json(path, {"job_id": args.job_id, "state": "completed", **result})
-    except Exception:
+    except Exception as exc:
         # Neither raw exception bodies nor account tokens belong in agent results.
         secure_write_json(
             path,
             {
                 "job_id": args.job_id,
                 "state": "failed",
+                "stage": stage,
+                "error_type": type(exc).__name__,
                 "error": "Stats preparation failed. Check authentication and network access, then retry; cached routes are retained.",
             },
         )

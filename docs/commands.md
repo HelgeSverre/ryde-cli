@@ -10,12 +10,12 @@ Usage blocks below show argparse's executable name. Common options `--format`, `
 ```text
 usage: ryde [-h] [--version] [--config CONFIG] [--base-url BASE_URL]
             [--mobile-type MOBILE_TYPE]
-            {login,account,rides,passes,payments,fees,summary,optimize,export,stats,skill} ...
+            {login,account,rides,passes,payments,fees,cities,summary,optimize,export,stats,skill} ...
 
 Command-line interface for personal, read-only Ryde account data.
 
 positional arguments:
-  {login,account,rides,passes,payments,fees,summary,optimize,export,stats,skill}
+  {login,account,rides,passes,payments,fees,cities,summary,optimize,export,stats,skill}
     login               guided SMS login; requests at most one SMS per minute
     account             account data
     rides               ride history, detail, and opt-in route data
@@ -23,6 +23,7 @@ positional arguments:
                         history
     payments            read-only payment order/recharge records
     fees                city fare/fee rule data
+    cities              look up available city names and IDs
     summary             local summary of fetched ride history
     optimize            conservative current RidePass comparison against your
                         history
@@ -304,6 +305,22 @@ options:
   --city-id CITY_ID
 ```
 
+## `ryde cities`
+
+```text
+usage: ryde cities [-h] [--format {json,csv,tsv,table}] [--output OUTPUT]
+                   [query]
+
+positional arguments:
+  query                 filter by city name (case insensitive)
+
+options:
+  -h, --help            show this help message and exit
+  --format {json,csv,tsv,table}
+                        output format (JSON default)
+  --output OUTPUT       write results owner-only (0600) instead of stdout
+```
+
 ## `ryde summary`
 
 ```text
@@ -341,10 +358,10 @@ options:
 usage: ryde export [-h] [--format {json,csv,tsv,table}] [--output OUTPUT]
                    [--start START] [--end END] [--city-id CITY_ID]
                    [--page PAGE] [--all]
-                   {rides,profile,catalogue,owned-passes,recharges,vipps,fee-rule,summary,recommendation}
+                   {cities,rides,profile,catalogue,owned-passes,recharges,vipps,fee-rule,summary,recommendation}
 
 positional arguments:
-  {rides,profile,catalogue,owned-passes,recharges,vipps,fee-rule,summary,recommendation}
+  {cities,rides,profile,catalogue,owned-passes,recharges,vipps,fee-rule,summary,recommendation}
 
 options:
   -h, --help            show this help message and exit
@@ -353,8 +370,8 @@ options:
   --output OUTPUT       write results owner-only (0600) instead of stdout
   --start START
   --end END
-  --city-id CITY_ID     needed for catalogue/fee-rule/recommendation (default
-                        15)
+  --city-id CITY_ID     required for catalogue/fee-rule/recommendation; look
+                        up with cities
   --page PAGE
   --all
 ```

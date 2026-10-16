@@ -173,6 +173,12 @@ def test_authenticated_form_is_signed_without_network(monkeypatch):
     assert form["token"] == ["synthetic-token"]
     assert form["timeSign"] == [time_sign(form["timestamp"][0])]
     assert request.method == "POST"
+    assert request.full_url == "https://api.ryde.vip/appRyde/getUserInfoByToken"
+    headers = {name.lower(): value for name, value in request.header_items()}
+    assert headers["ryde-app-version"] == "6.0.0"
+    assert headers["ryde-app-build"] == "715"
+    assert headers["user-agent"] == "Ryde/6.0.0 Android"
+    assert "appversion" not in headers
 
 
 def test_http_error_never_includes_reflected_credentials(monkeypatch):
@@ -191,6 +197,64 @@ def test_http_error_never_includes_reflected_credentials(monkeypatch):
         RydeClient(token="synthetic-private-token").profile()
     assert "401" in str(result.value)
     assert "synthetic-private-token" not in str(result.value)
+
+
+def test_city_lookup_filters_deduplicates_and_omits_boundaries(monkeypatch):
+    from ryde_cli.client import RydeClient
+
+    def post(self, path, fields):
+        assert path == "/appRyde/getCityFences"
+        assert fields == {"gpsLa": 0, "gpsLo": 0, "userCityId": ""}
+        return {
+            "citys": [
+                {"cityId": 102, "cityName": "Sample Bay", "cityRange": "omitted"},
+                {"cityId": "101", "cityName": "Sample City"},
+                {"cityId": 101, "cityName": "Sample City"},
+                {"cityId": 103, "cityName": "Elsewhere"},
+                {"cityId": "invalid", "cityName": "Sample"},
+                None,
+            ],
+            "fences": [{"synthetic": "boundary"}],
+        }
+
+    monkeypatch.setattr(RydeClient, "post", post)
+    client = RydeClient(token="synthetic")
+    assert client.cities("SAMPLE") == [
+        {"cityId": 102, "cityName": "Sample Bay"},
+        {"cityId": 101, "cityName": "Sample City"},
+    ]
+    assert len(client.cities()) == 3
+    assert client.cities("missing") == []
+
+
+def test_city_lookup_rejects_missing_city_list(monkeypatch):
+    from ryde_cli.client import RydeClient
+
+    monkeypatch.setattr(RydeClient, "post", lambda *a, **kw: {"status": 200})
+    with pytest.raises(RydeError, match="citys list"):
+        RydeClient(token="synthetic").cities()
+
+
+def test_sms_preflight_and_request_share_device_and_attempt(monkeypatch):
+    import hashlib
+
+    from ryde_cli.client import RydeClient
+
+    calls = []
+
+    def post(self, path, fields, *, auth):
+        assert not auth
+        calls.append((path, fields))
+        return {"status": 200, "attemptId": "synthetic-attempt"}
+
+    monkeypatch.setattr(RydeClient, "post", post)
+    client = RydeClient()
+    phone = "+4791234567"
+    options = client.phone_code_options(phone, "+47", "synthetic-device")
+    client.request_sms(phone, "+47", "synthetic-device", options["attemptId"])
+    assert calls[0][1]["userDevice"] == calls[1][1]["userDevice"] == "synthetic-device"
+    assert calls[1][1]["attemptId"] == "synthetic-attempt"
+    assert calls[1][1]["phoneHash"] == hashlib.sha256(phone.encode()).hexdigest()
 
 
 def test_missing_auth_does_not_make_requests(monkeypatch):

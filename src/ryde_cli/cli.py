@@ -116,14 +116,26 @@ def command_login(args: argparse.Namespace) -> None:
     phone, country_code = normalise_phone(raw_phone, args.country_code)
     device = args.device or store.device_id()
     check = client.check_phone(phone, country_code, device)
-    options = client.phone_code_options(phone, country_code)
-    if str(options.get("isImgCode", "0")) not in {"0", "false", "False"}:
-        raise RydeError(
-            "Ryde requires an image challenge; finish login in the official app and retry later"
-        )
+    options = client.phone_code_options(phone, country_code, device)
     now = time.time()
     last_request = float(store.data.get("last_sms_at", 0) or 0)
     wait = max(0, int(60 - (now - last_request)))
+    if not args.sms_code:
+        if str(options.get("isImgCode", "0")).lower() not in {"0", "false"}:
+            raise RydeError("Ryde requires an image challenge; CLI SMS login cannot complete it")
+        if str(options.get("reCAPTCHA", "0")).lower() not in {"0", "false"}:
+            raise RydeError(
+                "Ryde requires Android reCAPTCHA verification before sending an SMS; "
+                "CLI SMS login cannot currently complete this challenge. No SMS was requested."
+            )
+    challenge = client.attestation_challenge(
+        phone, device, "login" if args.sms_code else "send_sms"
+    )
+    if challenge.get("challenge") or challenge.get("challengeId"):
+        raise RydeError(
+            "Ryde requires Android Play Integrity device verification; "
+            "CLI login cannot currently complete this challenge. No SMS was requested."
+        )
     if args.sms_code:
         code = args.sms_code
     else:
@@ -139,9 +151,10 @@ def command_login(args: argparse.Namespace) -> None:
             raise RydeError(
                 f"an SMS was requested {60 - wait}s ago; refusing a duplicate for {wait}s (use --force only if needed)"
             )
-        client.request_sms(phone, country_code, device)
         store.data["last_sms_at"] = now
+        store.data["device_id"] = device
         store.save()
+        client.request_sms(phone, country_code, device, options.get("attemptId"))
         if not sys.stdin.isatty():
             print("SMS requested. Re-run with --sms-code CODE to complete login.", file=sys.stderr)
             return
@@ -247,6 +260,11 @@ def command_fees(args: argparse.Namespace) -> None:
     render(client.fee_rule(args.city_id), args.format, args.output)
 
 
+def command_cities(args: argparse.Namespace) -> None:
+    client, _ = client_from(args)
+    render(client.cities(args.query), args.format, args.output)
+
+
 def command_summary(args: argparse.Namespace) -> None:
     client, _ = client_from(args)
     render(summarize_rides(client.rides(args.start, args.end)), args.format, args.output)
@@ -265,6 +283,7 @@ def command_optimize(args: argparse.Namespace) -> None:
 def command_export(args: argparse.Namespace) -> None:
     # Calls the same command functions but requires an explicit path/format.
     dispatch: dict[str, Callable[[argparse.Namespace], None]] = {
+        "cities": command_cities,
         "rides": command_rides,
         "profile": command_account,
         "catalogue": command_passes,
@@ -276,6 +295,8 @@ def command_export(args: argparse.Namespace) -> None:
         "recommendation": command_optimize,
     }
     resource = args.resource
+    if resource in {"catalogue", "fee-rule", "recommendation"} and args.city_id is None:
+        raise RydeError("--city-id is required; look it up with uv run ryde cities")
     args.output = args.output or f"ryde-{resource}.{args.format}"
     if resource == "rides":
         args.rides_command = "list"
@@ -442,6 +463,11 @@ def build_parser() -> argparse.ArgumentParser:
     fees.add_argument("--city-id", required=True, type=int)
     fees.set_defaults(func=command_fees)
 
+    cities = commands.add_parser("cities", help="look up available city names and IDs")
+    _common(cities)
+    cities.add_argument("query", nargs="?", help="filter by city name (case insensitive)")
+    cities.set_defaults(func=command_cities)
+
     summary = commands.add_parser("summary", help="local summary of fetched ride history")
     _common(summary)
     _range(summary)
@@ -459,6 +485,7 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument(
         "resource",
         choices=(
+            "cities",
             "rides",
             "profile",
             "catalogue",
@@ -474,9 +501,9 @@ def build_parser() -> argparse.ArgumentParser:
     export.add_argument(
         "--city-id",
         type=int,
-        default=15,
-        help="needed for catalogue/fee-rule/recommendation (default 15)",
+        help="required for catalogue/fee-rule/recommendation; look up with cities",
     )
+    export.set_defaults(query=None)
     export.add_argument("--page", type=int, default=0)
     export.add_argument("--all", action="store_true")
     export.set_defaults(func=command_export)

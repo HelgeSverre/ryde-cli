@@ -34,6 +34,15 @@ records may already contain start/end coordinates and addresses.
   the CLI's `summary` / `optimize --city-id CITY_ID`. Explain that the pass model
   uses current prices and assumptions, not guaranteed savings.
 
+Before city-specific pass or fare requests, call `list_cities(query="city name")`
+or run `uv run ryde cities 'city name'`. Use the returned `cityId`; never guess
+an ID. If several cities match, resolve the ambiguity with the user. The lookup
+requires authentication and returns the cities supplied by Ryde's map API.
+
+If login reports Android reCAPTCHA or device attestation, report the limitation.
+Do not keep retrying SMS requests or claim that logging into the official app
+automatically signs the CLI in.
+
 Export data stays in the account-scoped private data directory outside the
 repository. Never copy personal datasets, auth files, or live output into a
 commit, fixture, skill, or public artifact. Do not echo tokens in tool results.

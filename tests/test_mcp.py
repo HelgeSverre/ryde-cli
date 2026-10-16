@@ -17,8 +17,9 @@ def test_mcp_tools_and_resources_can_initialize_without_account():
             "stats_job_status",
             "ride_route",
             "ride_summary",
+            "list_cities",
         } <= tools
-        assert len(tools) == 20
+        assert len(tools) == 21
         assert len(await server.list_resources()) == 1
         assert len(await server.list_resource_templates()) == 1
         with pytest.raises(ToolError, match="include_sensitive_location"):
@@ -29,6 +30,21 @@ def test_mcp_tools_and_resources_can_initialize_without_account():
             await server.call_tool("account_profile", {})
         with pytest.raises(ResourceError, match="log in"):
             await server.read_resource("ryde://account/summary")
+
+    asyncio.run(check())
+
+
+def test_mcp_city_lookup_passes_query_to_client(monkeypatch):
+    class Client:
+        def cities(self, query):
+            assert query == "sample"
+            return [{"cityId": 101, "cityName": "Sample City"}]
+
+    monkeypatch.setattr("ryde_cli.mcp_server._client", Client)
+
+    async def check():
+        result = await create_server().call_tool("list_cities", {"query": "sample"})
+        assert "Sample City" in str(result)
 
     asyncio.run(check())
 

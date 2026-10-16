@@ -17,7 +17,7 @@ compare RidePass costs.
 Login uses SMS. Account commands are read only.
 
 [Quick start](#quick-start) · [Dashboard](#map-your-rides) · [Commands](#all-commands) ·
-[MCP](#mcp-server) · [Claude / Codex](https://github.com/HelgeSverre/ryde-cli/blob/main/docs/agents.md) · [Development](https://github.com/HelgeSverre/ryde-cli/blob/main/CONTRIBUTING.md)
+[MCP](#mcp-server) · [Agent setup](https://github.com/HelgeSverre/ryde-cli/blob/main/docs/agents.md) · [Development](https://github.com/HelgeSverre/ryde-cli/blob/main/CONTRIBUTING.md)
 
 ## Quick start
 
@@ -50,6 +50,11 @@ For a persistent installation, see [distribution](https://github.com/HelgeSverre
 
 ## Login
 
+Ryde currently requires Android reCAPTCHA and device verification for SMS
+login. The CLI detects the reCAPTCHA requirement and stops before requesting
+an SMS. A browser CAPTCHA cannot use the Android app's key; support for this
+login flow is still in progress. See [API compatibility](https://github.com/HelgeSverre/ryde-cli/blob/main/docs/api.md).
+
 ```sh
 # Prompts for your phone number, asks before sending an SMS, then asks for the code.
 uv run ryde login
@@ -65,7 +70,8 @@ uv run ryde login --phone '<your E.164 phone number>' --sms-code '<code>'
 Local numbers default to country code `+47`; set `--country-code` for another
 country. For an international number, supply the matching country code too.
 A second SMS request is refused for 60 seconds unless `--force` is supplied.
-Image challenges must be completed in the official app.
+Image challenges are also unsupported. Logging into the official app does not
+sign the CLI in.
 
 The token, stable device ID, and client profile are saved to
 `~/.config/ryde-cli/config.json` with owner-only permissions (`0600`). Login
@@ -127,6 +133,7 @@ Every row below is prefixed with `uv run ryde`. The
 | `login` | SMS login; `--phone`, `--country-code`, `--send-sms`, `--sms-code`, `--force`, `--device`, `--phone-info`, `--latitude`, `--longitude` |
 | `account profile` | Your account/profile record |
 | `account active-ride` | Current ride status |
+| `cities [QUERY]` | Look up city names and IDs; optional case-insensitive name filter |
 | `rides list` | Completed rides; `--start YYYY-MM-DD`, `--end YYYY-MM-DD` |
 | `rides detail USE_ID` | A completed ride |
 | `rides order ORDER_ID` | A ride's linked charge/order |
@@ -145,9 +152,9 @@ Every row below is prefixed with `uv run ryde`. The
 | `skill --agent codex\|claude` | Install the workflow skill; `--scope project\|user` (default project), `--force` |
 | `export RESOURCE` | Save a resource; `--start`, `--end`, `--city-id`, `--page`, `--all` where applicable |
 
-`export` supports all nine resources: `rides`, `profile`, `catalogue`,
+`export` supports ten resources: `cities`, `rides`, `profile`, `catalogue`,
 `owned-passes`, `recharges`, `vipps`, `fee-rule`, `summary`, and `recommendation`.
-For city-specific exports, pass `--city-id` explicitly; its export default is `15`.
+City-specific exports require `--city-id`. Look it up with `uv run ryde cities`.
 Page numbering starts at `0`. Date ranges are inclusive and default to
 `2018-01-01` through today. Ride fetching starts with the requested start year's
 archive and includes the current partition when applicable. Future-year
@@ -166,19 +173,21 @@ to eight columns and 48 characters per cell; use JSON for complete records.
 
 ```sh
 uv run ryde account profile --format table
+uv run ryde cities --format table
+uv run ryde cities Bergen
 uv run ryde rides list --start 2026-01-01 --end 2026-12-31 --format csv --output ryde-rides.csv
 uv run ryde rides detail '<use-id>'
 uv run ryde rides order '<order-id>'
 uv run ryde rides route '<use-id>' --include-location --output ryde-route.json
-uv run ryde passes catalogue --city-id 15 --format table
+uv run ryde passes catalogue --city-id '<city-id>' --format table
 uv run ryde passes history --all --output ryde-passes.json
 uv run ryde payments vipps --all --format tsv --output ryde-vipps.tsv
 uv run ryde payments recharge-detail '<recharge-id>'
 uv run ryde payments month-amount 2026-08
 uv run ryde payments recharge-month 2026-08
-uv run ryde fees --city-id 15
+uv run ryde fees --city-id '<city-id>'
 uv run ryde export rides --format csv --output ryde-rides.csv
-uv run ryde export recommendation --city-id 15 --output ryde-analysis.json
+uv run ryde export recommendation --city-id '<city-id>' --output ryde-analysis.json
 ```
 
 `--output` writes atomically with permissions `0600`. `export` saves to
@@ -190,7 +199,7 @@ references, and account information; route exports include precise GPS history.
 
 ```sh
 uv run ryde summary --start 2026-08-01
-uv run ryde optimize --city-id 15 --start 2026-08-01
+uv run ryde optimize --city-id '<city-id>' --start 2026-08-01
 ```
 
 `summary` reports paid and nominal amounts, distance, duration, averages,
@@ -218,6 +227,28 @@ uvx --from ryde-cli ryde-mcp
 uv run ryde-mcp
 ```
 
+Register it with your agent (choose one):
+
+```sh
+# Claude Code
+claude mcp add --transport stdio --scope user ryde -- uvx --from ryde-cli ryde-mcp
+
+# Codex
+codex mcp add ryde -- uvx --from ryde-cli ryde-mcp
+
+# Gemini CLI
+gemini mcp add --scope user ryde uvx -- --from ryde-cli ryde-mcp
+
+# GitHub Copilot CLI
+copilot mcp add ryde -- uvx --from ryde-cli ryde-mcp
+
+# Amp
+amp mcp add ryde -- uvx --from ryde-cli ryde-mcp
+```
+
+See [agent setup](https://github.com/HelgeSverre/ryde-cli/blob/main/docs/agents.md)
+for verification, removal, and Cursor, VS Code, Zed, and OpenCode configuration.
+
 For clients that accept an `mcpServers` JSON configuration:
 
 ```json
@@ -225,8 +256,7 @@ For clients that accept an `mcpServers` JSON configuration:
   "mcpServers": {
     "ryde": {
       "command": "uvx",
-      "args": ["--from", "ryde-cli", "ryde-mcp"],
-      "env": {"RYDE_CONFIG": "/absolute/path/to/your/ryde-config.json"}
+      "args": ["--from", "ryde-cli", "ryde-mcp"]
     }
   }
 }
@@ -235,10 +265,13 @@ For clients that accept an `mcpServers` JSON configuration:
 Use an absolute path to `uvx` if a desktop app cannot find it on `PATH`. For
 reproducible deployments, pin the package version (`ryde-cli==0.1.1`).
 The server uses stdout for MCP messages and stderr for diagnostics.
+The default CLI login is shared automatically. Set `RYDE_CONFIG` in the server's
+environment only if you used a custom config path.
 
 | Tools | Purpose |
 | --- | --- |
 | `account_profile`, `current_ride` | Account and current status |
+| `list_cities` | Find city names and IDs before requesting passes, fares, or recommendations |
 | `list_rides`, `ride_detail`, `ride_order` | Completed rides and charges |
 | `ride_route` | GPS route; requires `include_sensitive_location=true` |
 | `pass_catalogue`, `owned_passes` | Current products and owned passes |
@@ -248,14 +281,14 @@ The server uses stdout for MCP messages and stderr for diagnostics.
 | `prepare_stats`, `open_stats` | Start background export / fetch-and-open jobs |
 | `stats_job_status`, `close_stats` | Poll a job / stop a dashboard |
 
-There are 20 tools. `open_stats` and `prepare_stats` return a `job_id` immediately;
+There are 21 tools. `open_stats` and `prepare_stats` return a `job_id` immediately;
 poll `stats_job_status` for completion. `open_stats(refresh=false)` opens an existing
 dataset immediately. This lets large exports complete without one long tool call.
 
 Resources: `ryde://account/summary` and `ryde://city/{city_id}/passes`.
 
 For MCP registration commands and the bundled workflow skill, see
-[Claude Code and Codex setup](https://github.com/HelgeSverre/ryde-cli/blob/main/docs/agents.md). From a checkout, explicit skill installation is:
+[agent setup](https://github.com/HelgeSverre/ryde-cli/blob/main/docs/agents.md). From a checkout, explicit skill installation is:
 
 ```sh
 uv run ryde skill --agent codex --scope user

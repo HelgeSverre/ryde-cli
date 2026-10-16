@@ -68,6 +68,11 @@ def create_server() -> Any:
     read_only = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True)
 
     @tool(annotations=read_only)
+    def list_cities(query: str | None = None) -> list[dict[str, Any]]:
+        """Look up available city names and IDs. Optional case-insensitive name filter. Call before city-specific passes, fares or recommendations; never guess IDs."""
+        return _client().cities(query)
+
+    @tool(annotations=read_only)
     def account_profile() -> dict[str, Any]:
         """Return the signed-in owner's profile/account record. Read-only."""
         return _client().profile()
@@ -103,7 +108,7 @@ def create_server() -> Any:
 
     @tool(annotations=read_only)
     def pass_catalogue(city_id: int) -> dict[str, Any]:
-        """Return current RidePass products, prices, allowances and validity for a city."""
+        """Return current RidePass products and prices. Resolve city_id with list_cities first."""
         return _client().pass_catalogue(city_id)
 
     @tool(annotations=read_only)
@@ -146,7 +151,7 @@ def create_server() -> Any:
 
     @tool(annotations=read_only)
     def city_fee_rule(city_id: int) -> dict[str, Any]:
-        """Return fee/fare rules for a city. Read-only."""
+        """Return fee/fare rules. Resolve city_id with list_cities first. Read-only."""
         return _client().fee_rule(city_id)
 
     @tool(annotations=read_only)
@@ -158,7 +163,7 @@ def create_server() -> Any:
     def recommend_ridepass(
         city_id: int, start: str | None = None, end: str | None = None
     ) -> dict[str, Any]:
-        """Compare current city RidePasses against observed rides with stated conservative assumptions."""
+        """Compare city RidePasses against observed rides with conservative assumptions. Resolve city_id with list_cities first."""
         client = _client()
         return recommend_passes(
             client.rides(_date(start), _date(end)),

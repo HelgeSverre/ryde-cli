@@ -10,7 +10,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
-DEFAULT_BASE_URL = "https://qw-test.ryde.vip/"
+DEFAULT_BASE_URL = "https://api.ryde.vip/"
 DEFAULT_MOBILE_TYPE = "Android/samsung/SM-G991B/samsung"
 DEFAULT_PHONE_INFO = "Android 14; SM-G991B"
 

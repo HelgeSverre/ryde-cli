@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Match Android 6.0.0 (build 715) request headers and the production API URL.
+- Detect required Android reCAPTCHA and Play Integrity before attempting SMS delivery; retain SMS attempt IDs and device identity.
+- Add city name/ID lookup through the CLI and MCP; require explicit city IDs for city-specific exports.
+- Add MCP installation and verification instructions for nine CLI/editor clients.
+
 ## 0.1.1 — 2026-10-16
 
 - Fetch ride archives from the requested start year, including history before 2024.

@@ -95,3 +95,89 @@ def test_cli_exposes_readonly_groups() -> None:
     assert parser.parse_args(["payments", "vipps", "--all"])
     assert parser.parse_args(["fees", "--city-id", "15"])
     assert parser.parse_args(["export", "rides", "--format", "csv"])
+    assert parser.parse_args(["cities", "sample"])
+
+
+def test_city_lookup_and_export(monkeypatch, tmp_path, capsys):
+    class Client:
+        def cities(self, query):
+            assert query in {"sample", None}
+            return [{"cityId": 101, "cityName": "Sample City"}]
+
+    monkeypatch.setattr("ryde_cli.cli.client_from", lambda _: (Client(), None))
+    main(["cities", "sample"])
+    assert json.loads(capsys.readouterr().out)[0]["cityId"] == 101
+    path = tmp_path / "cities.json"
+    main(["export", "cities", "--output", str(path)])
+    assert json.loads(path.read_text())[0]["cityName"] == "Sample City"
+
+
+@pytest.mark.parametrize("resource", ["catalogue", "fee-rule", "recommendation"])
+def test_city_exports_require_explicit_id(resource, monkeypatch, capsys):
+    monkeypatch.setattr(
+        "ryde_cli.cli.client_from", lambda _: pytest.fail("No API request expected")
+    )
+    with pytest.raises(SystemExit) as result:
+        main(["export", resource])
+    assert result.value.code == 1
+    assert "--city-id is required" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("challenge", [{"reCAPTCHA": "1"}, {"isImgCode": "1"}, {"reCAPTCHA": "0"}])
+def test_login_stops_before_sms_when_android_challenge_required(challenge, monkeypatch, capsys):
+    class Client:
+        def check_phone(self, *args):
+            return {"status": 200}
+
+        def phone_code_options(self, phone, country_code, device):
+            assert device == "synthetic-device"
+            return challenge
+
+        def request_sms(self, *args):
+            pytest.fail("Cannot send SMS without completing the required challenge")
+
+        def attestation_challenge(self, phone, device, purpose):
+            assert purpose == "send_sms"
+            return {"challengeId": "synthetic-challenge", "challenge": "synthetic-proof-input"}
+
+    class Store:
+        data = {}
+
+        def device_id(self):
+            return "synthetic-device"
+
+    monkeypatch.setattr("ryde_cli.cli.client_from", lambda *a, **kw: (Client(), Store()))
+    with pytest.raises(SystemExit) as result:
+        main(["login", "--phone", "+4791234567", "--send-sms"])
+    assert result.value.code == 1
+    assert "challenge" in capsys.readouterr().err
+
+
+def test_failed_sms_attempt_preserves_device_and_duplicate_guard(monkeypatch, capsys):
+    from ryde_cli.client import RydeError
+    from ryde_cli.config import ConfigStore
+
+    store = ConfigStore()
+
+    class Client:
+        def check_phone(self, *args):
+            return {"status": 200}
+
+        def phone_code_options(self, *args):
+            return {"reCAPTCHA": "0", "attemptId": "synthetic-attempt"}
+
+        def attestation_challenge(self, *args):
+            return {"status": 200}
+
+        def request_sms(self, phone, country_code, device, attempt_id):
+            saved = ConfigStore()
+            assert saved.data["device_id"] == device
+            assert saved.data["last_sms_at"] > 0
+            assert attempt_id == "synthetic-attempt"
+            raise RydeError("synthetic SMS rejection")
+
+    monkeypatch.setattr("ryde_cli.cli.client_from", lambda *a, **kw: (Client(), store))
+    for expected in ["synthetic SMS rejection", "refusing a duplicate"]:
+        with pytest.raises(SystemExit):
+            main(["login", "--phone", "+4791234567", "--send-sms"])
+        assert expected in capsys.readouterr().err

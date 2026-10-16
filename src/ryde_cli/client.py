@@ -25,8 +25,9 @@ from .config import DEFAULT_BASE_URL, DEFAULT_MOBILE_TYPE
 
 _KEY = b"a70678d869319dab"
 _IV = b"0102330405070708"
-APP_VERSION = "5.16.1"
-USER_AGENT = "okhttp/4.12.0"
+APP_VERSION = "6.0.0"
+APP_BUILD = "715"
+USER_AGENT = f"Ryde/{APP_VERSION} Android"
 
 
 class RydeError(RuntimeError):
@@ -105,7 +106,8 @@ class RydeClient:
             headers={
                 "Content-Type": "application/x-www-form-urlencoded",
                 "Accept": "application/json",
-                "AppVersion": APP_VERSION,
+                "Ryde-App-Version": APP_VERSION,
+                "Ryde-App-Build": APP_BUILD,
                 "MobileType": self.mobile_type,
                 "X-Frame-Options": "DENY",
                 "User-Agent": USER_AGENT,
@@ -149,18 +151,36 @@ class RydeClient:
             auth=False,
         )
 
-    def phone_code_options(self, phone: str, country_code: str) -> dict[str, Any]:
+    def phone_code_options(
+        self, phone: str, country_code: str, device_id: str | None = None
+    ) -> dict[str, Any]:
         return self.post(
             "/appRyde/getPhoneCode",
             {
                 "userPhone": phone,
                 "countryCode": country_code,
                 "time": "",
+                "userDevice": device_id,
             },
             auth=False,
         )
 
-    def request_sms(self, phone: str, country_code: str, device_id: str) -> dict[str, Any]:
+    def attestation_challenge(self, phone: str, device_id: str, purpose: str) -> dict[str, Any]:
+        """Check whether login needs a Google Play Integrity proof from Android."""
+        return self.post(
+            "/appRyde/getAttestChallenge",
+            {
+                "userDevice": device_id,
+                "platform": "2",
+                "phoneHash": hashlib.sha256(phone.encode()).hexdigest(),
+                "purpose": purpose,
+            },
+            auth=False,
+        )
+
+    def request_sms(
+        self, phone: str, country_code: str, device_id: str, attempt_id: str | None = None
+    ) -> dict[str, Any]:
         return self.post(
             "/appRyde/sendSms",
             {
@@ -169,6 +189,8 @@ class RydeClient:
                 "sign": aes_base64(phone),
                 "countryCode": country_code,
                 "userDevice": device_id,
+                "phoneHash": hashlib.sha256(phone.encode()).hexdigest(),
+                "attemptId": attempt_id,
             },
             auth=False,
         )
@@ -194,11 +216,37 @@ class RydeClient:
                 "mobileType": self.mobile_type,
                 "countryCode": country_code,
                 "userDevice": device_id,
+                "phoneHash": hashlib.sha256(phone.encode()).hexdigest(),
             },
             auth=False,
         )
 
     # Verified personal/account data endpoints.
+    def cities(self, query: str | None = None) -> list[dict[str, Any]]:
+        """Look up available city names and IDs without requesting the user's location."""
+        response = self.post(
+            "/appRyde/getCityFences",
+            {"gpsLa": 0, "gpsLo": 0, "userCityId": ""},
+        )
+        records = response.get("citys")
+        if not isinstance(records, list):
+            raise RydeError("city response is missing the citys list")
+        cities = {}
+        for record in records:
+            if not isinstance(record, dict):
+                continue
+            name = record.get("cityName")
+            try:
+                city_id = int(record.get("cityId", 0))
+            except (TypeError, ValueError):
+                continue
+            if city_id > 0 and isinstance(name, str) and name.strip():
+                if query is None or query.casefold() in name.casefold():
+                    cities[city_id] = {"cityId": city_id, "cityName": name}
+        return sorted(
+            cities.values(), key=lambda city: (city["cityName"].casefold(), city["cityId"])
+        )
+
     def profile(self) -> dict[str, Any]:
         return self.post("/appRyde/getUserInfoByToken", {"isOpen": "0", "appVer": "1"})
 

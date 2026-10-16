@@ -23,8 +23,8 @@ from cryptography.hazmat.primitives.padding import PKCS7
 
 from .config import DEFAULT_BASE_URL, DEFAULT_MOBILE_TYPE
 
-_KEY = b"a70678d869319dab"
-_IV = b"0102330405070708"
+_KEY = b"d5pfboziywpiinym"
+_IV = b"ji74d7vv2oalj4nz"
 APP_VERSION = "6.0.0"
 APP_BUILD = "715"
 USER_AGENT = f"Ryde/{APP_VERSION} Android"
@@ -117,7 +117,25 @@ class RydeClient:
             with urllib.request.urlopen(request, timeout=self.timeout) as response:
                 data = json.load(response)
         except urllib.error.HTTPError as exc:
-            # Error pages may echo request credentials; never forward their body.
+            # Only recognize fixed protocol codes; error bodies can echo credentials.
+            try:
+                error = json.loads(exc.read(65_536))
+            except (ValueError, OSError):
+                error = None
+            code = error.get("code") if isinstance(error, dict) else None
+            if code == "APP_ATTEST_INVALID":
+                raise RydeError(
+                    f"{path}: Ryde requires verification from its official app (APP_ATTEST_INVALID)"
+                ) from None
+            if code == "DPOP_REQUIRED":
+                raise AuthenticationRequired(
+                    f"{path}: this session requires its device-bound key; a token alone "
+                    "cannot authenticate it (DPOP_REQUIRED)"
+                ) from None
+            if exc.code == 401:
+                raise AuthenticationRequired(
+                    f"{path}: session expired or invalid (HTTP 401); log in again"
+                ) from None
             raise RydeError(f"{path}: server rejected request (HTTP {exc.code})") from None
         except urllib.error.URLError as exc:
             raise RydeError(f"{path}: network error: {exc.reason}") from exc
@@ -129,6 +147,8 @@ class RydeClient:
             raise RydeError(f"{path}: server returned invalid JSON") from None
         if not isinstance(data, dict):
             raise RydeError(f"{path}: expected a JSON object")
+        if data.get("tokenStatus") in (1, "1") or data.get("status") in (401, "401"):
+            raise AuthenticationRequired(f"{path}: session expired or invalid; log in again")
         status = data.get("status")
         if status not in (None, 200, "OK"):
             message = str(data.get("message") or data.get("error") or "unknown API error")

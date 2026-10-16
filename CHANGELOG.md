@@ -3,6 +3,8 @@
 ## Unreleased
 
 - Match Android 6.0.0 (build 715) request headers and the production API URL.
+- Refresh the native AES signing constants and verify the cipher and hash against the running APK.
+- Reject expired sessions even when the API returns HTTP 200; explain app-verification and device-key errors.
 - Detect required Android reCAPTCHA and Play Integrity before attempting SMS delivery; retain SMS attempt IDs and device identity.
 - Add city name/ID lookup through the CLI and MCP; require explicit city IDs for city-specific exports.
 - Add MCP installation and verification instructions for nine CLI/editor clients.

@@ -35,12 +35,23 @@ The integrity field for form POSTs is:
 ```text
 timeSign = lowercase_md5(base64(aes_128_cbc_pkcs7(
     "rydeGood:<timestamp_ms>:ryde-app",
-    key="a70678d869319dab", iv="0102330405070708")))
+    key="d5pfboziywpiinym", iv="ji74d7vv2oalj4nz")))
 ```
 
 `sendSms` signs the E.164 phone number using the same AES/Base64 operation.
 These constants reproduce the app protocol; they are not account credentials.
 Signing is not a substitute for server-side access controls.
+
+The AES constants above were read from the running 6.0.0 APK's native signer.
+For `rydeGood:1756288320000:ryde-app`, both the APK and CLI produce
+`Id+qXHTPbKDcF/MRFUfvTrGfPeFLth1/fYhfemJj3Sw=` and the MD5
+`48f00bd5244d6bd95151d1a84c60a3e4`. Unauthenticated preflight success alone
+does not verify signing compatibility.
+
+Ryde can return HTTP 200 with `tokenStatus=1` for an expired session. The client
+treats that as an authentication failure. It also recognizes
+`APP_ATTEST_INVALID` (official-app verification required) and `DPOP_REQUIRED`
+(the session's device-bound key is required) without displaying response bodies.
 
 | Capability | Endpoint(s) |
 | --- | --- |

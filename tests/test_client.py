@@ -79,7 +79,11 @@ def test_future_end_date_does_not_fetch_future_year_partitions(monkeypatch):
 
 
 def test_signing_matches_verified_live_test_vector() -> None:
-    assert time_sign("1756288320000") == "6af328a18456726b45b8fdc83fee8e0a"
+    assert (
+        aes_base64("rydeGood:1756288320000:ryde-app")
+        == "Id+qXHTPbKDcF/MRFUfvTrGfPeFLth1/fYhfemJj3Sw="
+    )
+    assert time_sign("1756288320000") == "48f00bd5244d6bd95151d1a84c60a3e4"
     assert base64.b64decode(aes_base64("+4791234567"))
 
 
@@ -196,6 +200,34 @@ def test_http_error_never_includes_reflected_credentials(monkeypatch):
     with pytest.raises(RydeError) as result:
         RydeClient(token="synthetic-private-token").profile()
     assert "401" in str(result.value)
+    assert "synthetic-private-token" not in str(result.value)
+
+
+@pytest.mark.parametrize("body", [{"status": 200, "tokenStatus": 1}, {"status": 401}])
+def test_invalid_session_cannot_look_like_success(monkeypatch, body):
+    import json
+
+    from ryde_cli.client import AuthenticationRequired, RydeClient
+
+    monkeypatch.setattr("urllib.request.urlopen", lambda *a, **kw: io.StringIO(json.dumps(body)))
+    with pytest.raises(AuthenticationRequired, match="session expired or invalid"):
+        RydeClient(token="synthetic").profile()
+
+
+@pytest.mark.parametrize("code", ["APP_ATTEST_INVALID", "DPOP_REQUIRED"])
+def test_native_auth_errors_explain_requirement_without_exposing_body(monkeypatch, code):
+    import json
+    import urllib.error
+
+    from ryde_cli.client import RydeClient
+
+    def reject(request, timeout):
+        body = json.dumps({"code": code, "message": "synthetic-private-token"}).encode()
+        raise urllib.error.HTTPError(request.full_url, 403, "Forbidden", {}, io.BytesIO(body))
+
+    monkeypatch.setattr("urllib.request.urlopen", reject)
+    with pytest.raises(RydeError, match=code) as result:
+        RydeClient(token="synthetic-private-token").profile()
     assert "synthetic-private-token" not in str(result.value)
 
 

@@ -13,7 +13,7 @@
 [![CodeQL](https://github.com/HelgeSverre/ryde-cli/actions/workflows/codeql.yml/badge.svg)](https://github.com/HelgeSverre/ryde-cli/actions/workflows/codeql.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://github.com/HelgeSverre/ryde-cli/blob/main/pyproject.toml)
 [![MIT license](https://img.shields.io/badge/license-MIT-green.svg)](https://github.com/HelgeSverre/ryde-cli/blob/main/LICENSE)
-[![uv](https://img.shields.io/badge/managed%20with-uv-de5fe9.svg)](https://docs.astral.sh/uv/)
+[![uv](https://img.shields.io/badge/uv-DE5FE9?logo=uv&logoColor=white)](https://docs.astral.sh/uv/)
 
 An unofficial CLI, local map dashboard, and MCP server for your Ryde account.
 Export ride history, map recorded routes, inspect passes and payments, and

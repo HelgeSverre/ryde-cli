@@ -1,3 +1,8 @@
+> [!WARNING]
+> Ryde CLI is currently broken. The Ryde server now requires app attestation,
+> which blocks CLI login (`APP_ATTEST_REQUIRED`). I have not yet figured out
+> how to bypass it. See [API compatibility](docs/api.md) for the findings so far.
+
 ![Ryde CLI — Your rides. Your data.](https://raw.githubusercontent.com/HelgeSverre/ryde-cli/main/docs/assets/header.png)
 
 # Ryde CLI
